@@ -91,7 +91,7 @@ public class DrivetrainAndOdometry extends OpMode {
     private DcMotor BackRight;
     private DcMotor BackLeft;
 
-    private DcMotor IntakeMotor;
+    //private DcMotor IntakeMotor;
     private DcMotor ShooterMotor;
 
     //LPS COUNTER ----------------------------------------------------------------------------------
@@ -249,9 +249,13 @@ public class DrivetrainAndOdometry extends OpMode {
             RobotRotation += 360;
         }
 
-        telemetry.addData("X", (Math.round (10*RobotXPosition) / 10));
-        telemetry.addData("Y", (Math.round (10*RobotYPosition) / 10));
-        telemetry.addData("θ", (Math.round (10*RobotRotation) / 10));
+        double robotXpositionRound = (Math.round (100*RobotXPosition));
+        double robotYpositionRound = (Math.round (100*RobotYPosition));
+        double robotRotationRound = (Math.round (100*RobotRotation));
+
+        telemetry.addData("X", (robotXpositionRound / 100));
+        telemetry.addData("Y", (robotYpositionRound / 100));
+        telemetry.addData("θ", (robotRotationRound / 100));
 
         telemetry.addData("Vertical Left Encoder", verticalLeft.getCurrentPosition());
         telemetry.addData("Vertical Right Encoder", verticalRight.getCurrentPosition());
@@ -298,7 +302,13 @@ public class DrivetrainAndOdometry extends OpMode {
         telemetry.addLine()
                 .addData("heading", new Func<String>() {
                     @Override public String value() {
-                        return /*formatAngle(angles.angleUnit, */String.format("%.2f", angles.firstAngle)/*)*/;
+                        double normalizedAngle = angles.firstAngle;
+
+                        if (normalizedAngle < 0) {
+                            normalizedAngle += 360;
+                        }
+
+                        return formatAngle(angles.angleUnit, normalizedAngle);
                     }
                 })
                 .addData("roll", new Func<String>() {
@@ -314,10 +324,6 @@ public class DrivetrainAndOdometry extends OpMode {
     }
 
     String formatAngle(AngleUnit angleUnit, double angle) {
-        if (angle < 0){
-            angle += 2*Math.PI;
-        }
-
         return formatDegrees(AngleUnit.DEGREES.fromUnit(angleUnit, angle));
     }
 
@@ -328,6 +334,7 @@ public class DrivetrainAndOdometry extends OpMode {
     //SHOOTER --------------------------------------------------------------------------------------
 
     private void initializeShooter() {
+        ShooterMotor = hardwareMap.dcMotor.get("ShooterMotor");
         ShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         ShooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
@@ -337,9 +344,11 @@ public class DrivetrainAndOdometry extends OpMode {
             if (firstPressShooterToggleButton) {
                 if (shooterOn) {
                     ShooterMotor.setPower(0);
+                    shooterOn = false;
                 }
                 else {
                     ShooterMotor.setPower(1);
+                    shooterOn = true;
                 }
                 firstPressShooterToggleButton = false;
             }
