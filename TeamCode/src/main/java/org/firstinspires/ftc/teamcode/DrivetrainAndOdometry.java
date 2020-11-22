@@ -76,6 +76,11 @@ public class DrivetrainAndOdometry extends OpMode {
     private boolean firstPressShooterToggleButton = true;
     private boolean shooterOn = false;
 
+    //INTAKE VARIABLES -----------------------------------------------------------------------------
+
+    private boolean firstPressIntakeToggleButton = true;
+    private boolean intakeOn = false;
+
     //GAMEPAD IMPUTS -------------------------------------------------------------------------------
 
     private double movement_x;
@@ -83,6 +88,7 @@ public class DrivetrainAndOdometry extends OpMode {
     private double movement_turn;
 
     private boolean shooterToggleButton;
+    private boolean intakeToggleButton;
 
    //MOTORS AND SERVOS -----------------------------------------------------------------------------
 
@@ -91,7 +97,7 @@ public class DrivetrainAndOdometry extends OpMode {
     private DcMotor BackRight;
     private DcMotor BackLeft;
 
-    //private DcMotor IntakeMotor;
+    private DcMotor IntakeMotor;
     private DcMotor ShooterMotor;
 
     //LPS COUNTER ----------------------------------------------------------------------------------
@@ -109,6 +115,7 @@ public class DrivetrainAndOdometry extends OpMode {
         initializeOdometry();
         initializeIMU();
         initializeShooter();
+        initializeIntake();
         telemetry.addData("Status", "Init Complete");
         telemetry.update();
     }
@@ -137,10 +144,12 @@ public class DrivetrainAndOdometry extends OpMode {
         movement_turn = DeadModifier(.75 * gamepad1.right_stick_x);
 
         shooterToggleButton = gamepad1.a;
+        intakeToggleButton = gamepad1.b;
 
         applyMovement();
         checkOdometry();
         runShooter();
+        runIntake();
 
         telemetry.update();
     }
@@ -356,6 +365,31 @@ public class DrivetrainAndOdometry extends OpMode {
 
 
     //INTAKE ---------------------------------------------------------------------------------------
+
+    private void initializeIntake() {
+        IntakeMotor = hardwareMap.dcMotor.get("IntakeMotor");
+        IntakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        IntakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    }
+
+    private void runIntake() {
+        if (intakeToggleButton) {
+            if (firstPressIntakeToggleButton) {
+                if (intakeOn) {
+                    IntakeMotor.setPower(0);
+                    intakeOn = false;
+                }
+                else {
+                    IntakeMotor.setPower(1);
+                    intakeOn = true;
+                }
+                firstPressIntakeToggleButton = false;
+            }
+        }
+        else {
+            firstPressIntakeToggleButton = true;
+        }
+    }
 
 
 }
