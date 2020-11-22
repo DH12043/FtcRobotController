@@ -104,6 +104,7 @@ public class DrivetrainAndOdometry extends OpMode {
 
     @Override
     public void init() {
+        telemetry.addData("Version Number", "11/21/20");
         initializeDriveTrain();
         initializeOdometry();
         initializeIMU();
@@ -114,8 +115,8 @@ public class DrivetrainAndOdometry extends OpMode {
 
     @Override
     public void start() {
-        startOdometry();
         startIMU();
+        startOdometry();
         telemetry.addData("Status", "Odometry System has started");
         telemetry.update();
     }
@@ -233,7 +234,7 @@ public class DrivetrainAndOdometry extends OpMode {
     }
 
     private void startOdometry() {
-        globalPositionUpdate = new OdometryGlobalCoordinatePosition(verticalLeft, verticalRight, horizontal, COUNTS_PER_INCH, 25);
+        globalPositionUpdate = new OdometryGlobalCoordinatePosition(verticalLeft, verticalRight, horizontal, COUNTS_PER_INCH, 25, imu);
         positionThread = new Thread(globalPositionUpdate);
         positionThread.start();
 
@@ -299,28 +300,23 @@ public class DrivetrainAndOdometry extends OpMode {
         }
         });
 
-        telemetry.addLine()
-                .addData("heading", new Func<String>() {
-                    @Override public String value() {
-                        double normalizedAngle = angles.firstAngle;
+        if(angles != null) {
 
-                        if (normalizedAngle < 0) {
-                            normalizedAngle += 360;
+            telemetry.addLine()
+                    .addData("heading", new Func<Object>() {
+                        @Override
+                        public Object value() {
+                            double normalizedAngle = angles.firstAngle;
+
+                            if (normalizedAngle < 0) {
+                                normalizedAngle += 360;
+                            }
+                            return normalizedAngle; // formatAngle(angles.angleUnit, );
                         }
-
-                        return formatAngle(angles.angleUnit, normalizedAngle);
-                    }
-                })
-                .addData("roll", new Func<String>() {
-                    @Override public String value() {
-                        return formatAngle(angles.angleUnit, angles.secondAngle);
-                    }
-                })
-                .addData("pitch", new Func<String>() {
-                    @Override public String value() {
-                        return formatAngle(angles.angleUnit, angles.thirdAngle);
-                    }
-                });
+                    })
+                /*.addData("roll", formatAngle(angles.angleUnit, angles.secondAngle))
+                .addData("pitch", formatAngle(angles.angleUnit, angles.thirdAngle))*/;
+        }
     }
 
     String formatAngle(AngleUnit angleUnit, double angle) {
