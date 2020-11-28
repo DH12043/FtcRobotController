@@ -1,36 +1,49 @@
 package org.firstinspires.ftc.teamcode;
 
 import android.os.SystemClock;
-import android.view.View;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+
+import java.util.List;
+import java.util.Locale;
+
+import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.Func;
-import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
-import java.util.Locale;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.CameraDirection;
+import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
+import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.CRServo;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.Servo;
-import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
-import com.qualcomm.robotcore.util.Range;
-import java.io.File;
+//A: (1,4 on dice) Close - 0 rings
+//B: (2,5 on dice) Middle - 1 rings
+//C: (3,6 on dice) Far - 4 rings
 
-@TeleOp(name = "DrivetrainAndOdometry")
-public class DrivetrainAndOdometry extends OpMode {
+@Autonomous(name = "AutoTest")
+public class AutoTest extends OpMode{
 
-    //ODOMETRY/DRIVETRAIN/IMU VARIABLES AND DEVICES ------------------------------------------------
+    private int path;
 
-    public static final double DEADZONE = 0.15;
+    private static final String TFOD_MODEL_ASSET = "UltimateGoal.tflite";
+    private static final String LABEL_FIRST_ELEMENT = "Quad";
+    private static final String LABEL_SECOND_ELEMENT = "Single";
+
+    private static final String VUFORIA_KEY =
+            "ARFWHLf/////AAABmQYBi+Yt9UfXhQeC8EeUpylMd+Pha6aQHw+i5Pyw28Fs7CaBACsFzXFNGv7p2jfwf9sn5zAO1CNrRa6XilwVANqg6g+mkwciKF38WPZGG6j88PDkkTkH6Sq6RM/VeeYCf+BikiEWGjM/BS5u8FlfvYERSQ9En9Hn8ootiBHXeNZrGl4BZwIfpt0LachcG2DAadZSZbtGV6evUlpC++Sx6JvuERscDOFVo1YdV2MHovW82LVRgp8Xctfsdr5euTXVkCT7d2C9I1X7D+y4mjjZSd4N6VMkuQYAXTsIU+RSW+OeSXtRRkFdZ7O5fCM6bUNgGUdyT7vSRUWh3A3qVTGLNT+exhPciVkD9yW/xW5yMvMk";
+
+    private VuforiaLocalizer vuforia;
+    private TFObjectDetector tfod;
+
 
     BNO055IMU imu;
     Orientation angles;
@@ -49,14 +62,6 @@ public class DrivetrainAndOdometry extends OpMode {
     private double StartingYPosition;
     private double StartingRotation;
 
-    private double ScoringXPosition;
-    private double ScoringYPosition;
-    private double ScoringRotation;
-
-    private File startingXpositionFile = AppUtil.getInstance().getSettingsFile("startingXposition.txt");
-    private File startingYpositionFile = AppUtil.getInstance().getSettingsFile("startingYposition.txt");
-    private File startingθpositionFile = AppUtil.getInstance().getSettingsFile("startingθposition.txt");
-
     final double COUNTS_PER_INCH = 307.699557;
 
     private static final double DECELERATION_START_POINT = 24;
@@ -71,36 +76,14 @@ public class DrivetrainAndOdometry extends OpMode {
     OdometryGlobalCoordinatePosition globalPositionUpdate;
     Thread positionThread;
 
-    //SHOOTER VARIABLES ----------------------------------------------------------------------------
-
-    private boolean firstPressShooterToggleButton = true;
-    private boolean shooterOn = false;
-
-    //INTAKE VARIABLES -----------------------------------------------------------------------------
-
-    private boolean firstPressIntakeToggleButton = true;
-    private boolean intakeOn = false;
-
-    //GAMEPAD IMPUTS -------------------------------------------------------------------------------
-
-    private double movement_x;
-    private double movement_y;
-    private double movement_turn;
-
-    private boolean shooterToggleButton;
-    private boolean intakeToggleButton;
-
-   //MOTORS AND SERVOS -----------------------------------------------------------------------------
-
     private DcMotor FrontRight;
     private DcMotor FrontLeft;
     private DcMotor BackRight;
     private DcMotor BackLeft;
 
-    private DcMotor IntakeMotor;
-    private DcMotor ShooterMotor;
-
-    //LPS COUNTER ----------------------------------------------------------------------------------
+    private double movement_x;
+    private double movement_y;
+    private double movement_turn;
 
     private int loopCount;
     private double loopStartTime;
@@ -110,25 +93,36 @@ public class DrivetrainAndOdometry extends OpMode {
 
     @Override
     public void init() {
-        telemetry.addData("Version Number", "11/21/20");
+        initVuforia();
+        initTfod();
+
         initializeDriveTrain();
         initializeOdometry();
         initializeIMU();
-        initializeShooter();
-        initializeIntake();
-        telemetry.addData("Status", "Init Complete");
-        telemetry.update();
-    }
 
-    @Override
+        if (tfod != null) {
+            tfod.activate();
+            // The TensorFlow software will scale the input images from the camera to a lower resolution.
+            // This can result in lower detection accuracy at longer distances (> 55cm or 22").
+            // If your target is at distance greater than 50 cm (20") you can adjust the magnification value
+            // to artificially zoom in to the center of image.  For best results, the "aspectRatio" argument
+            // should be set to the value of the images used to create the TensorFlow Object Detection model
+            // (typically 1.78 or 16/9).
+            // Uncomment the following line if you want to adjust the magnification and/or the aspect ratio of the input images.
+            tfod.setZoom(2.5, 1.78);
+        }
+        com.vuforia.CameraDevice.getInstance().setFlashTorchMode(true);
+    }
     public void start() {
+        if (tfod != null) {
+            tfod.shutdown();
+        }
+
         startIMU();
         startOdometry();
         telemetry.addData("Status", "Odometry System has started");
         telemetry.update();
     }
-
-    @Override
     public void loop() {
         double currentTime = getRuntime();
         loopCount++;
@@ -139,29 +133,62 @@ public class DrivetrainAndOdometry extends OpMode {
         }
         telemetry.addData("LPS: ", loopsPerSecond);
 
-        movement_y = DeadModifier(-gamepad1.left_stick_y);
-        movement_x = DeadModifier(gamepad1.left_stick_x);
-        movement_turn = DeadModifier(.75 * gamepad1.right_stick_x);
+        if (tfod != null) {
+            // getUpdatedRecognitions() will return null if no new information is available since
+            // the last time that call was made.
+            List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
+            if (updatedRecognitions != null) {
+                telemetry.addData("# Object Detected", updatedRecognitions.size());
 
-        shooterToggleButton = gamepad1.a;
-        intakeToggleButton = gamepad1.b;
+                // step through the list of recognitions and display boundary info.
+                int i = 0;
+                for (Recognition recognition : updatedRecognitions) {
+                    telemetry.addData(String.format("label (%d)", i), recognition.getLabel());
+                    telemetry.addData(String.format("  left,top (%d)", i), "%.03f , %.03f",
+                            recognition.getLeft(), recognition.getTop());
+                    telemetry.addData(String.format("  right,bottom (%d)", i), "%.03f , %.03f",
+                            recognition.getRight(), recognition.getBottom());
+
+                    if (recognition.getLabel().equals("Quad")) {
+                        path = 4;
+                    }
+                    if (recognition.getLabel().equals("Single")) {
+                        path = 1;
+                    }
+
+                }
+            }
+        }
+        else {
+            path = 0;
+        }
+
+        telemetry.addData("Path", path);
 
         applyMovement();
         checkOdometry();
-        runShooter();
-        runIntake();
 
         telemetry.update();
+
     }
 
-    //DRIVETRAIN -----------------------------------------------------------------------------------
+    private void initVuforia() {
+        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters();
 
-    private double DeadModifier(double joystickValue) {
-        if(joystickValue < DEADZONE && joystickValue > -DEADZONE)
-            return 0;
-        else {
-            return joystickValue;
-        }
+        parameters.vuforiaLicenseKey = VUFORIA_KEY;
+        parameters.cameraDirection = CameraDirection.BACK;
+
+        //  Instantiate the Vuforia engine
+        vuforia = ClassFactory.getInstance().createVuforia(parameters);
+    }
+
+    private void initTfod() {
+        int tfodMonitorViewId = hardwareMap.appContext.getResources().getIdentifier(
+                "tfodMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        TFObjectDetector.Parameters tfodParameters = new TFObjectDetector.Parameters(tfodMonitorViewId);
+        tfodParameters.minResultConfidence = 0.8f;
+        tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
+        tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_FIRST_ELEMENT, LABEL_SECOND_ELEMENT);
     }
 
     private void initializeDriveTrain() {
@@ -334,61 +361,6 @@ public class DrivetrainAndOdometry extends OpMode {
 
     String formatDegrees(double degrees){
         return String.format(Locale.getDefault(), "%.1f", AngleUnit.DEGREES.normalize(degrees));
-    }
-
-    //SHOOTER --------------------------------------------------------------------------------------
-
-    private void initializeShooter() {
-        ShooterMotor = hardwareMap.dcMotor.get("ShooterMotor");
-        ShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        ShooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-    }
-
-    private void runShooter() {
-        if (shooterToggleButton) {
-            if (firstPressShooterToggleButton) {
-                if (shooterOn) {
-                    ShooterMotor.setPower(0);
-                    shooterOn = false;
-                }
-                else {
-                    ShooterMotor.setPower(1);
-                    shooterOn = true;
-                }
-                firstPressShooterToggleButton = false;
-            }
-        }
-        else {
-            firstPressShooterToggleButton = true;
-        }
-    }
-
-
-    //INTAKE ---------------------------------------------------------------------------------------
-
-    private void initializeIntake() {
-        IntakeMotor = hardwareMap.dcMotor.get("IntakeMotor");
-        IntakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        IntakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-    }
-
-    private void runIntake() {
-        if (intakeToggleButton) {
-            if (firstPressIntakeToggleButton) {
-                if (intakeOn) {
-                    IntakeMotor.setPower(0);
-                    intakeOn = false;
-                }
-                else {
-                    IntakeMotor.setPower(1);
-                    intakeOn = true;
-                }
-                firstPressIntakeToggleButton = false;
-            }
-        }
-        else {
-            firstPressIntakeToggleButton = true;
-        }
     }
 
 }
