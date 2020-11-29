@@ -8,6 +8,8 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import java.util.List;
 import java.util.Locale;
@@ -64,12 +66,6 @@ public class AutoTest extends OpMode{
 
     final double COUNTS_PER_INCH = 307.699557;
 
-    private static final double DECELERATION_START_POINT = 24;
-    private static final double DECELERATION_ZERO_POINT = -6;
-    private static final double TURNING_DECELERATION_START_POINT = 100;
-    private static final double TURNING_DECELERATION_ZERO_POINT = -5;
-    private static final double X_SPEED_MULTIPLIER = 1;
-
     private double lastDistanceToTarget = 0;
     private double distanceToTarget;
 
@@ -85,38 +81,46 @@ public class AutoTest extends OpMode{
     private double movement_y;
     private double movement_turn;
 
-    private int loopCount;
-    private double loopStartTime;
-    private int loopsPerSecond;
+    private VoltageSensor batteryVoltageSensor;
+    private double batteryVoltage;
+    private double DEFAULT_MOVEMENT_SPEED = 1.0;
+    private double DEFAULT_TURN_SPEED = 1.0;
+    private static final double BATTERY_VOLTAGE_COMP_X1 = 13.0;
+    private static final double BATTERY_VOLTAGE_COMP_X2 = 14.0;
+    private static final double BATTERY_VOLTAGE_COMP_Y1 = 1.0;
+    private static final double BATTERY_VOLTAGE_COMP_Y2 = 0.8;
 
+    private double startTime;
+    private double currentTime;
     private long lastUpdateTime = 0;
+
+    private int autoState = INIT_STATE;
+    private int lastAutoState = NO_STATE;
+    private static final int NO_STATE = -1;
+    private static final int INIT_STATE = 0;
+    private static final double DECELERATION_START_POINT = 48;
+    private static final double DECELERATION_ZERO_POINT = -6;   // -6
+    private static final double TURNING_DECELERATION_START_POINT = 180;
+    private static final double TURNING_DECELERATION_ZERO_POINT = -5; // -5
+    private static final double X_SPEED_MULTIPLIER = 1;
+
 
     @Override
     public void init() {
+        batteryVoltageSensor = hardwareMap.voltageSensor.get("Expansion Hub 2");
+
         initVuforia();
         initTfod();
 
         initializeDriveTrain();
         initializeOdometry();
         initializeIMU();
-
-        if (tfod != null) {
-            tfod.activate();
-            // The TensorFlow software will scale the input images from the camera to a lower resolution.
-            // This can result in lower detection accuracy at longer distances (> 55cm or 22").
-            // If your target is at distance greater than 50 cm (20") you can adjust the magnification value
-            // to artificially zoom in to the center of image.  For best results, the "aspectRatio" argument
-            // should be set to the value of the images used to create the TensorFlow Object Detection model
-            // (typically 1.78 or 16/9).
-            // Uncomment the following line if you want to adjust the magnification and/or the aspect ratio of the input images.
-            tfod.setZoom(2.5, 1.78);
-        }
-        com.vuforia.CameraDevice.getInstance().setFlashTorchMode(true);
+        telemetry.update();
     }
     public void start() {
-        if (tfod != null) {
-            tfod.shutdown();
-        }
+        startTfod();
+
+        checkBatteryVoltage();
 
         startIMU();
         startOdometry();
@@ -124,15 +128,41 @@ public class AutoTest extends OpMode{
         telemetry.update();
     }
     public void loop() {
-        double currentTime = getRuntime();
-        loopCount++;
-        if (currentTime > loopStartTime + 5) {
-            loopsPerSecond = loopCount;
-            loopCount = 0;
-            loopStartTime = currentTime;
-        }
-        telemetry.addData("LPS: ", loopsPerSecond);
+        currentTime = getRuntime();
 
+        choosePath();
+
+        checkOdometry();
+
+        telemetry.update();
+    }
+
+    @Override
+    public void stop() {
+        globalPositionUpdate.stop();
+    }
+
+    //Battery --------------------------------------------------------------------------------------
+
+    private void checkBatteryVoltage() {
+        batteryVoltage = batteryVoltageSensor.getVoltage();
+
+        // Max motor power is decreased if battery voltage is greater than a certain threshold,
+        // and is linearly decreased at a larger amount as voltage increases.
+        if(batteryVoltage > BATTERY_VOLTAGE_COMP_X1) {
+            DEFAULT_MOVEMENT_SPEED = ((BATTERY_VOLTAGE_COMP_Y2 - BATTERY_VOLTAGE_COMP_Y1)
+                    / (BATTERY_VOLTAGE_COMP_X2 - BATTERY_VOLTAGE_COMP_X1))
+                    * (batteryVoltage - BATTERY_VOLTAGE_COMP_X1) + BATTERY_VOLTAGE_COMP_Y1;
+            DEFAULT_TURN_SPEED = DEFAULT_MOVEMENT_SPEED;
+        } else {
+            DEFAULT_MOVEMENT_SPEED = 1.0;
+            DEFAULT_TURN_SPEED = 1.0;
+        }
+    }
+
+    //Vuforia --------------------------------------------------------------------------------------
+
+    private void choosePath() {
         if (tfod != null) {
             // getUpdatedRecognitions() will return null if no new information is available since
             // the last time that call was made.
@@ -164,12 +194,6 @@ public class AutoTest extends OpMode{
         }
 
         telemetry.addData("Path", path);
-
-        applyMovement();
-        checkOdometry();
-
-        telemetry.update();
-
     }
 
     private void initVuforia() {
@@ -189,7 +213,28 @@ public class AutoTest extends OpMode{
         tfodParameters.minResultConfidence = 0.8f;
         tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
         tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_FIRST_ELEMENT, LABEL_SECOND_ELEMENT);
+
+        if (tfod != null) {
+            tfod.activate();
+            // The TensorFlow software will scale the input images from the camera to a lower resolution.
+            // This can result in lower detection accuracy at longer distances (> 55cm or 22").
+            // If your target is at distance greater than 50 cm (20") you can adjust the magnification value
+            // to artificially zoom in to the center of image.  For best results, the "aspectRatio" argument
+            // should be set to the value of the images used to create the TensorFlow Object Detection model
+            // (typically 1.78 or 16/9).
+            // Uncomment the following line if you want to adjust the magnification and/or the aspect ratio of the input images.
+            tfod.setZoom(2.5, 1.78);
+        }
+        com.vuforia.CameraDevice.getInstance().setFlashTorchMode(true);
     }
+
+    private void startTfod() {
+        if (tfod != null) {
+            tfod.shutdown();
+        }
+    }
+
+    //Drivetrain -----------------------------------------------------------------------------------
 
     private void initializeDriveTrain() {
         FrontRight = hardwareMap.dcMotor.get("FrontRight");
@@ -299,6 +344,90 @@ public class AutoTest extends OpMode{
         telemetry.addData("Horizontal Encoder", horizontal.getCurrentPosition());
 
         telemetry.addData("Thread Active", positionThread.isAlive());
+    }
+
+    //GoToPosition ---------------------------------------------------------------------------------
+
+    private void goToPosition(double x, double y, double maxMovementSpeed, double maxTurnSpeed, double preferredAngle) {
+        distanceToTarget = Math.hypot(x-RobotXPosition, y-RobotYPosition);
+        double absoluteAngleToTarget = Math.atan2(y-RobotYPosition, x-RobotXPosition);
+        double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget
+                - Math.toRadians(RobotRotation) + Math.toRadians(90));
+
+        double relativeXToPoint = 2 * Math.sin(relativeAngleToPoint);
+        double relativeYToPoint = Math.cos(relativeAngleToPoint);
+
+        double movementXPower = relativeXToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
+        double movementYPower = relativeYToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
+
+        double yDecelLimiter = Range.clip(Math.abs((distanceToTarget - DECELERATION_ZERO_POINT)
+                / (DECELERATION_START_POINT - DECELERATION_ZERO_POINT)), 0, 1);
+        double xDecelLimiter = Range.clip(yDecelLimiter * X_SPEED_MULTIPLIER, 0, 1);
+
+        double relativeTurnAngle = AngleWrap(Math.toRadians(preferredAngle)-Math.toRadians(RobotRotation));
+        double turnDecelLimiter = Range.clip((Math.abs(Math.toDegrees(relativeTurnAngle)) - TURNING_DECELERATION_ZERO_POINT)
+                / (TURNING_DECELERATION_START_POINT - TURNING_DECELERATION_ZERO_POINT), 0, 1);
+
+        movement_x = movementXPower * Range.clip(maxMovementSpeed, -xDecelLimiter, xDecelLimiter);
+        movement_y = movementYPower * Range.clip(maxMovementSpeed, -yDecelLimiter, yDecelLimiter);
+
+        if (distanceToTarget < 1) {
+            movement_turn = 0;
+        } else {
+            //movement_turn = Range.clip(Range.clip(relativeTurnAngle / Math.toRadians(30),
+            //        -1, 1) * maxTurnSpeed, -turnDecelLimiter, turnDecelLimiter);
+            movement_turn = Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
+        }
+        telemetry.addData("relativeTurnAngle", relativeTurnAngle);
+        telemetry.addData("turnDecelLimiter", turnDecelLimiter);
+        telemetry.addData("relativeXToPoint", relativeXToPoint);
+        telemetry.addData("relativeYToPoint", relativeYToPoint);
+        telemetry.addData("X Movement", movement_x);
+        telemetry.addData("Y Movement", movement_y);
+        telemetry.addData("Turn Movement", movement_turn);
+
+        lastDistanceToTarget = distanceToTarget;
+
+        applyMovement();
+    }
+
+    private void goToPositionByTime(double x, double y, double preferredAngle, double timeout, int thisState, int nextState) {
+        double maxMovementSpeed = 1.0;
+        double maxTurnSpeed = 1.0;
+
+        goToPositionByTime(x, y, maxMovementSpeed, maxTurnSpeed, preferredAngle, timeout, thisState, nextState);
+    }
+
+    private void goToPositionByTime(double x, double y, double maxMovementSpeed, double maxTurnSpeed, double preferredAngle, double timeout, int thisState, int nextState) {
+        // exit method if auto is not in this state
+        if (autoState != thisState) {
+            return;
+        }
+
+        if (lastAutoState != thisState) {
+            startTime = getRuntime();
+            lastAutoState = thisState;
+        }
+
+        // setup timer, set startTime variable
+
+
+        if (currentTime - timeout > startTime) {
+            autoState = nextState;
+        }
+        goToPosition(x, y, maxMovementSpeed, maxTurnSpeed, preferredAngle);
+    }
+
+    private static double AngleWrap(double angle){
+
+        while(angle < -Math.PI){
+            angle += 2*Math.PI;
+        }
+        while(angle > Math.PI){
+            angle -= 2*Math.PI;
+        }
+
+        return angle;
     }
 
     //IMU ------------------------------------------------------------------------------------------

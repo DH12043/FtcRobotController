@@ -10,11 +10,13 @@ import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
 import java.util.Locale;
 
+import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -70,6 +72,15 @@ public class DrivetrainAndOdometry extends OpMode {
 
     OdometryGlobalCoordinatePosition globalPositionUpdate;
     Thread positionThread;
+    //DISTANCE SENSORS -----------------------------------------------------------------------------
+
+    private ModernRoboticsI2cRangeSensor LeftDistanceSensor;
+    private ModernRoboticsI2cRangeSensor FrontDistanceSensor;
+    private ModernRoboticsI2cRangeSensor RightDistanceSensor;
+
+    private double leftDistance;
+    private double frontDistance;
+    private double rightDistance;
 
     //SHOOTER VARIABLES ----------------------------------------------------------------------------
 
@@ -89,6 +100,7 @@ public class DrivetrainAndOdometry extends OpMode {
 
     private boolean shooterToggleButton;
     private boolean intakeToggleButton;
+    private boolean driveToLaunchButton;
 
    //MOTORS AND SERVOS -----------------------------------------------------------------------------
 
@@ -114,6 +126,7 @@ public class DrivetrainAndOdometry extends OpMode {
         initializeDriveTrain();
         initializeOdometry();
         initializeIMU();
+        initializeDistanceSensors();
         initializeShooter();
         initializeIntake();
         telemetry.addData("Status", "Init Complete");
@@ -130,28 +143,34 @@ public class DrivetrainAndOdometry extends OpMode {
 
     @Override
     public void loop() {
-        double currentTime = getRuntime();
-        loopCount++;
-        if (currentTime > loopStartTime + 5) {
-            loopsPerSecond = loopCount;
-            loopCount = 0;
-            loopStartTime = currentTime;
-        }
-        telemetry.addData("LPS: ", loopsPerSecond);
+        checkLPS();
 
-        movement_y = DeadModifier(-gamepad1.left_stick_y);
-        movement_x = DeadModifier(gamepad1.left_stick_x);
-        movement_turn = DeadModifier(.75 * gamepad1.right_stick_x);
+        driveToLaunchButton = gamepad1.right_bumper;
+
+        if(driveToLaunchButton) {
+            goToPosition(5, 48, .75, .5, 0);
+        }
+        else {
+            movement_y = DeadModifier(-gamepad1.left_stick_y);
+            movement_x = DeadModifier(gamepad1.left_stick_x);
+            movement_turn = DeadModifier(.75 * gamepad1.right_stick_x);
+        }
 
         shooterToggleButton = gamepad1.a;
         intakeToggleButton = gamepad1.b;
 
         applyMovement();
         checkOdometry();
+        checkDistanceSensors();
         runShooter();
         runIntake();
 
         telemetry.update();
+    }
+
+    @Override
+    public void stop() {
+        globalPositionUpdate.stop();
     }
 
     //DRIVETRAIN -----------------------------------------------------------------------------------
@@ -274,6 +293,63 @@ public class DrivetrainAndOdometry extends OpMode {
         telemetry.addData("Thread Active", positionThread.isAlive());
     }
 
+    //goToPosition ---------------------------------------------------------------------------------
+
+    private void goToPosition(double x, double y, double maxMovementSpeed, double maxTurnSpeed, double preferredAngle) {
+        distanceToTarget = Math.hypot(x-RobotXPosition, y-RobotYPosition);
+        double absoluteAngleToTarget = Math.atan2(y-RobotYPosition, x-RobotXPosition);
+        double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget
+                - Math.toRadians(RobotRotation) + Math.toRadians(90));
+
+        double relativeXToPoint = 2 * Math.sin(relativeAngleToPoint);
+        double relativeYToPoint = Math.cos(relativeAngleToPoint);
+
+        double movementXPower = relativeXToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
+        double movementYPower = relativeYToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
+
+        double yDecelLimiter = Range.clip(Math.abs((distanceToTarget - DECELERATION_ZERO_POINT)
+                / (DECELERATION_START_POINT - DECELERATION_ZERO_POINT)), 0, 1);
+        double xDecelLimiter = Range.clip(yDecelLimiter * X_SPEED_MULTIPLIER, 0, 1);
+
+        double relativeTurnAngle = AngleWrap(Math.toRadians(preferredAngle)-Math.toRadians(RobotRotation));
+        double turnDecelLimiter = Range.clip((Math.abs(Math.toDegrees(relativeTurnAngle)) - TURNING_DECELERATION_ZERO_POINT)
+                / (TURNING_DECELERATION_START_POINT - TURNING_DECELERATION_ZERO_POINT), 0, 1);
+
+        movement_x = movementXPower * Range.clip(maxMovementSpeed, -xDecelLimiter, xDecelLimiter);
+        movement_y = movementYPower * Range.clip(maxMovementSpeed, -yDecelLimiter, yDecelLimiter);
+
+        if (distanceToTarget < 1) {
+            movement_turn = 0;
+        } else {
+            //movement_turn = Range.clip(Range.clip(relativeTurnAngle / Math.toRadians(30),
+            //        -1, 1) * maxTurnSpeed, -turnDecelLimiter, turnDecelLimiter);
+            movement_turn = Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
+        }
+        telemetry.addData("relativeTurnAngle", relativeTurnAngle);
+        telemetry.addData("turnDecelLimiter", turnDecelLimiter);
+        telemetry.addData("relativeXToPoint", relativeXToPoint);
+        telemetry.addData("relativeYToPoint", relativeYToPoint);
+        telemetry.addData("X Movement", movement_x);
+        telemetry.addData("Y Movement", movement_y);
+        telemetry.addData("Turn Movement", movement_turn);
+
+        lastDistanceToTarget = distanceToTarget;
+
+        applyMovement();
+    }
+
+    private static double AngleWrap(double angle){
+
+        while(angle < -Math.PI){
+            angle += 2*Math.PI;
+        }
+        while(angle > Math.PI){
+            angle -= 2*Math.PI;
+        }
+
+        return angle;
+    }
+
     //IMU ------------------------------------------------------------------------------------------
 
     private void initializeIMU() {
@@ -336,6 +412,25 @@ public class DrivetrainAndOdometry extends OpMode {
         return String.format(Locale.getDefault(), "%.1f", AngleUnit.DEGREES.normalize(degrees));
     }
 
+    //WALL DISTANCE SENSORS
+
+    private void initializeDistanceSensors() {
+        LeftDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor .class, "LeftDistanceSensor");
+        FrontDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor .class, "FrontDistanceSensor");
+        RightDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor .class, "RightDistanceSensor");
+    }
+
+    private void checkDistanceSensors() {
+        leftDistance = LeftDistanceSensor.getDistance(DistanceUnit.INCH);
+        frontDistance = FrontDistanceSensor.getDistance(DistanceUnit.INCH);
+        rightDistance = RightDistanceSensor.getDistance(DistanceUnit.INCH);
+
+        telemetry.addData("LeftDistance", leftDistance);
+        telemetry.addData("FrontDistance", frontDistance);
+        telemetry.addData("RightDistance", rightDistance);
+    }
+
+
     //SHOOTER --------------------------------------------------------------------------------------
 
     private void initializeShooter() {
@@ -389,6 +484,19 @@ public class DrivetrainAndOdometry extends OpMode {
         else {
             firstPressIntakeToggleButton = true;
         }
+    }
+
+    //Check LPS ------------------------------------------------------------------------------------
+
+    private void checkLPS() {
+        double currentTime = getRuntime();
+        loopCount++;
+        if (currentTime > loopStartTime + 5) {
+            loopsPerSecond = loopCount;
+            loopCount = 0;
+            loopStartTime = currentTime;
+        }
+        telemetry.addData("LPS: ", loopsPerSecond);
     }
 
 }
