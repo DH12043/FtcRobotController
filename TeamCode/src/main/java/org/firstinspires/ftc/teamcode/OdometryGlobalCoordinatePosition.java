@@ -16,6 +16,7 @@ import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 import java.io.File;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by Sarthak on 6/1/2019.
@@ -25,7 +26,7 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
     private DcMotor verticalEncoderLeft, verticalEncoderRight, horizontalEncoder;
 
     //Thead run condition
-    private boolean isRunning = true;
+    private final AtomicBoolean isRunning = new AtomicBoolean(true);
 
     //Position variables used for storage and calculations
     double verticalRightEncoderWheelPosition = 0, verticalLeftEncoderWheelPosition = 0, normalEncoderWheelPosition = 0,  changeInRobotOrientation = 0;
@@ -130,7 +131,9 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
     /**
      * Stops the position update thread
      */
-    public void stop(){ isRunning = false; }
+    public void stop(){
+        isRunning.set (false);
+    }
 
     public void reverseLeftEncoder(){
         if(verticalLeftEncoderPositionMultiplier == 1){
@@ -161,7 +164,7 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
      */
     @Override
     public void run() {
-        while(isRunning) {
+        while(isRunning.get()) {
             globalCoordinatePositionUpdate();
             try {
                 Thread.sleep(sleepTime);

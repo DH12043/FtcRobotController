@@ -35,7 +35,7 @@ public class DrivetrainAndOdometry extends OpMode {
     public static final double DEADZONE = 0.15;
 
     BNO055IMU imu;
-    Orientation angles;
+    Orientation angles; //Is this an unclosed thread?
 
     DcMotor verticalRight, verticalLeft, horizontal;
 
@@ -75,11 +75,11 @@ public class DrivetrainAndOdometry extends OpMode {
     //DISTANCE SENSORS -----------------------------------------------------------------------------
 
     private ModernRoboticsI2cRangeSensor LeftDistanceSensor;
-    private ModernRoboticsI2cRangeSensor FrontDistanceSensor;
+    private ModernRoboticsI2cRangeSensor BackDistanceSensor;
     private ModernRoboticsI2cRangeSensor RightDistanceSensor;
 
     private double leftDistance;
-    private double frontDistance;
+    private double backDistance;
     private double rightDistance;
 
     //SHOOTER VARIABLES ----------------------------------------------------------------------------
@@ -143,6 +143,7 @@ public class DrivetrainAndOdometry extends OpMode {
 
     @Override
     public void loop() {
+        double currentTimeAtCheckLPS = getRuntime();
         checkLPS();
 
         driveToLaunchButton = gamepad1.right_bumper;
@@ -159,18 +160,33 @@ public class DrivetrainAndOdometry extends OpMode {
         shooterToggleButton = gamepad1.a;
         intakeToggleButton = gamepad1.b;
 
+        double currentTimeAtApplyMovement = getRuntime();
         applyMovement();
+        double currentTimeAtCheckOdometry = getRuntime();
         checkOdometry();
-        checkDistanceSensors();
+        double currentTimeAtDistanceSensors = getRuntime();
+        //checkDistanceSensors();
+        double currentTimeAtRunShooter = getRuntime();
         runShooter();
+        double currentTimeAtRunIntake = getRuntime();
         runIntake();
+        double currentTimeAfterRunIntake = getRuntime();
+
+        telemetry.addData("LPS and drivetrain", "%.1f", (currentTimeAtApplyMovement-currentTimeAtCheckLPS) * 1000);
+        telemetry.addData("Apply Movement", "%.1f", (currentTimeAtCheckOdometry-currentTimeAtApplyMovement) * 1000);
+        telemetry.addData("Check Odometry", "%.1f", (currentTimeAtDistanceSensors-currentTimeAtCheckOdometry) * 1000);
+        telemetry.addData("Check Distance Sensors", "%.1f", (currentTimeAtRunShooter-currentTimeAtDistanceSensors) * 1000);
+        telemetry.addData("Run Shooter", "%.1f", (currentTimeAtRunIntake-currentTimeAtRunShooter) * 1000);
+        telemetry.addData("Run Intake", "%.1f", (currentTimeAfterRunIntake-currentTimeAtRunIntake) * 1000);
 
         telemetry.update();
     }
 
     @Override
     public void stop() {
-        globalPositionUpdate.stop();
+        if (globalPositionUpdate != null) {
+            globalPositionUpdate.stop();
+        }
     }
 
     //DRIVETRAIN -----------------------------------------------------------------------------------
@@ -416,17 +432,20 @@ public class DrivetrainAndOdometry extends OpMode {
 
     private void initializeDistanceSensors() {
         LeftDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor .class, "LeftDistanceSensor");
-        FrontDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor .class, "FrontDistanceSensor");
+        BackDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor .class, "BackDistanceSensor");
         RightDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor .class, "RightDistanceSensor");
     }
 
     private void checkDistanceSensors() {
+        if (loopCount % 10 != 0)
+            return;
+
         leftDistance = LeftDistanceSensor.getDistance(DistanceUnit.INCH);
-        frontDistance = FrontDistanceSensor.getDistance(DistanceUnit.INCH);
+        backDistance = BackDistanceSensor.getDistance(DistanceUnit.INCH);
         rightDistance = RightDistanceSensor.getDistance(DistanceUnit.INCH);
 
         telemetry.addData("LeftDistance", leftDistance);
-        telemetry.addData("FrontDistance", frontDistance);
+        telemetry.addData("BackDistance", backDistance);
         telemetry.addData("RightDistance", rightDistance);
     }
 
