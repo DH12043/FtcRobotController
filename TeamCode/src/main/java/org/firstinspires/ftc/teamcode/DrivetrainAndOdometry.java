@@ -500,16 +500,9 @@ public class DrivetrainAndOdometry extends OpMode {
         if (shooterToggleButton) {
             if (firstPressShooterToggleButton) {
                 if (shooterOn) {
-                    ShooterMotor.setPower(0);
                     shooterOn = false;
                 }
                 else {
-                    if(shooterIsFast) {
-                        ShooterMotor.setPower(.8);
-                    }
-                    else {
-                        ShooterMotor.setPower(.25);
-                    }
                     shooterOn = true;
                 }
                 firstPressShooterToggleButton = false;
@@ -517,6 +510,18 @@ public class DrivetrainAndOdometry extends OpMode {
         }
         else {
             firstPressShooterToggleButton = true;
+        }
+
+        if (shooterOn) {
+            if (shooterIsFast) {
+                ShooterMotor.setPower(.8);
+            }
+            else {
+                ShooterMotor.setPower(.25);
+            }
+        }
+        else {
+            ShooterMotor.setPower(0);
         }
 
         currentShooterTickCount = ShooterMotor.getCurrentPosition();
