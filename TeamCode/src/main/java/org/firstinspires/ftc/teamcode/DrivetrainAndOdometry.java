@@ -85,7 +85,16 @@ public class DrivetrainAndOdometry extends OpMode {
     //SHOOTER VARIABLES ----------------------------------------------------------------------------
 
     private boolean firstPressShooterToggleButton = true;
+    private boolean firstPressShooterFeedingToggleButton = true;
+    private boolean firstPressShooterSpeedToggleButton = true;
     private boolean shooterOn = false;
+    private boolean shooterIsFast = true;
+    private boolean shooterFeedingOn = false;
+
+    private double shooterTicksPerRevolution = 103.6;
+
+    private int currentShooterTickCount;
+    private int previousShooterTickCount;
 
     //INTAKE VARIABLES -----------------------------------------------------------------------------
 
@@ -99,6 +108,9 @@ public class DrivetrainAndOdometry extends OpMode {
     private double movement_turn;
 
     private boolean shooterToggleButton;
+    private boolean shooterFeedingToggleButton;
+    private boolean shooterSpeedToggleButton;
+    private double whileHoldingFeedShooterButton;
     private boolean intakeToggleButton;
     private boolean driveToLaunchButton;
 
@@ -111,12 +123,16 @@ public class DrivetrainAndOdometry extends OpMode {
 
     private DcMotor IntakeMotor;
     private DcMotor ShooterMotor;
+    private DcMotor ShooterFeedingMotor;
 
     //LPS COUNTER ----------------------------------------------------------------------------------
 
     private int loopCount;
     private double loopStartTime;
-    private int loopsPerSecond;
+    private double loopsPerSecond;
+
+    private double currentTime;
+    private double previousTime;
 
     private long lastUpdateTime = 0;
 
@@ -158,7 +174,10 @@ public class DrivetrainAndOdometry extends OpMode {
         }
 
         shooterToggleButton = gamepad1.a;
+        shooterFeedingToggleButton = gamepad1.x;
         intakeToggleButton = gamepad1.b;
+        shooterSpeedToggleButton = gamepad1.y;
+        whileHoldingFeedShooterButton = gamepad1.right_trigger;
 
         double currentTimeAtApplyMovement = getRuntime();
         applyMovement();
@@ -456,9 +475,28 @@ public class DrivetrainAndOdometry extends OpMode {
         ShooterMotor = hardwareMap.dcMotor.get("ShooterMotor");
         ShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         ShooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        ShooterFeedingMotor = hardwareMap.dcMotor.get("ShooterFeedingMotor");
+        ShooterFeedingMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        ShooterFeedingMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
     private void runShooter() {
+        if(shooterSpeedToggleButton) {
+            if (firstPressShooterSpeedToggleButton) {
+                if (shooterIsFast) {
+                    shooterIsFast = false;
+                }
+                else {
+                    shooterIsFast = true;
+                }
+                firstPressShooterSpeedToggleButton = false;
+            }
+        }
+        else {
+            firstPressShooterSpeedToggleButton = true;
+        }
+
         if (shooterToggleButton) {
             if (firstPressShooterToggleButton) {
                 if (shooterOn) {
@@ -466,7 +504,12 @@ public class DrivetrainAndOdometry extends OpMode {
                     shooterOn = false;
                 }
                 else {
-                    ShooterMotor.setPower(1);
+                    if(shooterIsFast) {
+                        ShooterMotor.setPower(.8);
+                    }
+                    else {
+                        ShooterMotor.setPower(.25);
+                    }
                     shooterOn = true;
                 }
                 firstPressShooterToggleButton = false;
@@ -475,6 +518,41 @@ public class DrivetrainAndOdometry extends OpMode {
         else {
             firstPressShooterToggleButton = true;
         }
+
+        currentShooterTickCount = ShooterMotor.getCurrentPosition();
+
+        double shooterRevolutionsPerLoop = ((currentShooterTickCount - previousShooterTickCount) / shooterTicksPerRevolution);
+        double shooterRevolutionsPerMinute = shooterRevolutionsPerLoop * loopsPerSecond *60*3;
+
+        telemetry.addData("shooterRevolutionsPerMinute", shooterRevolutionsPerMinute);
+
+        previousShooterTickCount = currentShooterTickCount;
+
+        if (whileHoldingFeedShooterButton > .5) {
+            ShooterFeedingMotor.setPower(-1);
+        }
+        else {
+            if (shooterFeedingToggleButton) {
+                if (firstPressShooterFeedingToggleButton) {
+                    if (shooterFeedingOn) {
+                        shooterFeedingOn = false;
+                    } else {
+                        shooterFeedingOn = true;
+                    }
+                    firstPressShooterFeedingToggleButton = false;
+                }
+            } else {
+                firstPressShooterFeedingToggleButton = true;
+            }
+
+            if(shooterFeedingOn) {
+                ShooterFeedingMotor.setPower(-1);
+            }
+            else{
+                ShooterFeedingMotor.setPower(0);
+            }
+        }
+
     }
 
 
@@ -508,9 +586,18 @@ public class DrivetrainAndOdometry extends OpMode {
     //Check LPS ------------------------------------------------------------------------------------
 
     private void checkLPS() {
+        currentTime = getRuntime();
+
+        double timePerLoop = currentTime - previousTime;
+        loopsPerSecond = 1 / timePerLoop;
+
+        previousTime = currentTime;
+    }
+
+    private void oldCheckLPS() {
         double currentTime = getRuntime();
         loopCount++;
-        if (currentTime > loopStartTime + 5) {
+        if (currentTime > loopStartTime + 1) {
             loopsPerSecond = loopCount;
             loopCount = 0;
             loopStartTime = currentTime;

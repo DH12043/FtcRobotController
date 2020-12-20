@@ -52,6 +52,8 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
     BNO055IMU imu;
     Orientation angles;
 
+    private double previousRobotOrientation;
+
 
     /**
      * Constructor for GlobalCoordinatePosition Thread
@@ -87,6 +89,7 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
         robotOrientationRadians = imuOrientation.firstAngle;
 
         //Calculate Angle
+        //changeInRobotOrientation = previousRobotOrientation - robotOrientationRadians;
         changeInRobotOrientation = (leftChange - rightChange) / (robotEncoderWheelDistance);
         //robotOrientationRadians = ((robotOrientationRadians + changeInRobotOrientation));
 
@@ -108,6 +111,8 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
         previousVerticalLeftEncoderWheelPosition = verticalLeftEncoderWheelPosition;
         previousVerticalRightEncoderWheelPosition = verticalRightEncoderWheelPosition;
         prevNormalEncoderWheelPosition = normalEncoderWheelPosition;
+
+        previousRobotOrientation = robotOrientationRadians;
     }
 
     /**
