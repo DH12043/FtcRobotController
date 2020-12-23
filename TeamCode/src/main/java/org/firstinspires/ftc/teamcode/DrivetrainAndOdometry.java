@@ -35,7 +35,9 @@ public class DrivetrainAndOdometry extends OpMode {
     public static final double DEADZONE = 0.15;
 
     BNO055IMU imu;
-    Orientation angles; //Is this an unclosed thread?
+    BNO055IMU imu2;
+    Orientation angles;
+    Orientation angles2;
 
     DcMotor verticalRight, verticalLeft, horizontal;
 
@@ -138,7 +140,7 @@ public class DrivetrainAndOdometry extends OpMode {
 
     @Override
     public void init() {
-        telemetry.addData("Version Number", "11/21/20");
+        telemetry.addData("Version Number", "12/22/20");
         initializeDriveTrain();
         initializeOdometry();
         initializeIMU();
@@ -160,7 +162,7 @@ public class DrivetrainAndOdometry extends OpMode {
     @Override
     public void loop() {
         double currentTimeAtCheckLPS = getRuntime();
-        checkLPS();
+        oldCheckLPS();
 
         driveToLaunchButton = gamepad1.right_bumper;
 
@@ -399,12 +401,27 @@ public class DrivetrainAndOdometry extends OpMode {
         imu = hardwareMap.get(BNO055IMU.class, "imu");
         imu.initialize(parameters);
 
+
+
+        BNO055IMU.Parameters parameters2 = new BNO055IMU.Parameters();
+        parameters2.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
+        parameters2.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters2.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
+        parameters2.loggingEnabled      = true;
+        parameters2.loggingTag          = "IMU2";
+        parameters2.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+
+        imu2 = hardwareMap.get(BNO055IMU.class, "imu2");
+        imu2.initialize(parameters2);
+
         // Set up our telemetry dashboard
         composeTelemetry();
+        composeTelemetry2();
     }
 
     private void startIMU() {
         imu.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+        imu2.startAccelerationIntegration(new Position(), new Velocity(), 1000);
     }
 
     void composeTelemetry() {
@@ -427,6 +444,38 @@ public class DrivetrainAndOdometry extends OpMode {
                         @Override
                         public Object value() {
                             double normalizedAngle = angles.firstAngle;
+
+                            if (normalizedAngle < 0) {
+                                normalizedAngle += 360;
+                            }
+                            return normalizedAngle; // formatAngle(angles.angleUnit, );
+                        }
+                    })
+                /*.addData("roll", formatAngle(angles.angleUnit, angles.secondAngle))
+                .addData("pitch", formatAngle(angles.angleUnit, angles.thirdAngle))*/;
+        }
+    }
+
+    void composeTelemetry2() {
+
+        // At the beginning of each telemetry update, grab a bunch of data
+        // from the IMU that we will then display in separate lines.
+        telemetry.addAction(new Runnable() { @Override public void run()
+        {
+            // Acquiring the angles is relatively expensive; we don't want
+            // to do that in each of the three items that need that info, as that's
+            // three times the necessary expense.
+            angles2   = imu2.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        }
+        });
+
+        if(angles2 != null) {
+
+            telemetry.addLine()
+                    .addData("heading2", new Func<Object>() {
+                        @Override
+                        public Object value() {
+                            double normalizedAngle = angles2.firstAngle;
 
                             if (normalizedAngle < 0) {
                                 normalizedAngle += 360;
