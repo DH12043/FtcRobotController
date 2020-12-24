@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
 import android.os.SystemClock;
-import android.view.View;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
@@ -27,17 +26,17 @@ import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import com.qualcomm.robotcore.util.Range;
 import java.io.File;
 
-@TeleOp(name = "DrivetrainAndOdometry")
-public class DrivetrainAndOdometry extends OpMode {
+@TeleOp(name = "PowerSurgeTeleOp")
+public class PowerSurgeTeleOp extends OpMode {
 
     //ODOMETRY/DRIVETRAIN/IMU VARIABLES AND DEVICES ------------------------------------------------
 
     public static final double DEADZONE = 0.15;
 
     BNO055IMU imu;
-    BNO055IMU imu2;
+    //BNO055IMU imu2;
     Orientation angles;
-    Orientation angles2;
+    //Orientation angles2;
 
     DcMotor verticalRight, verticalLeft, horizontal;
 
@@ -48,6 +47,7 @@ public class DrivetrainAndOdometry extends OpMode {
     private double RobotXPosition;
     private double RobotYPosition;
     private double RobotRotation;
+    //private double RobotRotation2;
 
     private double StartingXPosition;
     private double StartingYPosition;
@@ -310,18 +310,25 @@ public class DrivetrainAndOdometry extends OpMode {
         RobotXPosition = (globalPositionUpdate.returnXCoordinate() / COUNTS_PER_INCH) + StartingXPosition;
         RobotYPosition = (globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH) + StartingYPosition;
         RobotRotation = (globalPositionUpdate.returnOrientation()) + StartingRotation;
+        //RobotRotation2 = (globalPositionUpdate.returnOrientation2()) + StartingRotation;
 
         if (RobotRotation < 0){
             RobotRotation += 360;
         }
 
+        /*if (RobotRotation2 < 0){
+            RobotRotation2 += 360;
+        }*/
+
         double robotXpositionRound = (Math.round (100*RobotXPosition));
         double robotYpositionRound = (Math.round (100*RobotYPosition));
         double robotRotationRound = (Math.round (100*RobotRotation));
+        //double robotRotation2Round = (Math.round (100*RobotRotation2));
 
         telemetry.addData("X", (robotXpositionRound / 100));
         telemetry.addData("Y", (robotYpositionRound / 100));
         telemetry.addData("θ", (robotRotationRound / 100));
+        //telemetry.addData("θ", (robotRotation2Round / 100));
 
         telemetry.addData("Vertical Left Encoder", verticalLeft.getCurrentPosition());
         telemetry.addData("Vertical Right Encoder", verticalRight.getCurrentPosition());
@@ -403,7 +410,7 @@ public class DrivetrainAndOdometry extends OpMode {
 
 
 
-        BNO055IMU.Parameters parameters2 = new BNO055IMU.Parameters();
+        /*BNO055IMU.Parameters parameters2 = new BNO055IMU.Parameters();
         parameters2.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
         parameters2.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
         parameters2.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
@@ -412,16 +419,16 @@ public class DrivetrainAndOdometry extends OpMode {
         parameters2.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
 
         imu2 = hardwareMap.get(BNO055IMU.class, "imu2");
-        imu2.initialize(parameters2);
+        imu2.initialize(parameters2);*/
 
         // Set up our telemetry dashboard
         composeTelemetry();
-        composeTelemetry2();
+        //composeTelemetry2();
     }
 
     private void startIMU() {
         imu.startAccelerationIntegration(new Position(), new Velocity(), 1000);
-        imu2.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+        //imu2.startAccelerationIntegration(new Position(), new Velocity(), 1000);
     }
 
     void composeTelemetry() {
@@ -456,7 +463,7 @@ public class DrivetrainAndOdometry extends OpMode {
         }
     }
 
-    void composeTelemetry2() {
+    /*void composeTelemetry2() {
 
         // At the beginning of each telemetry update, grab a bunch of data
         // from the IMU that we will then display in separate lines.
@@ -483,10 +490,11 @@ public class DrivetrainAndOdometry extends OpMode {
                             return normalizedAngle; // formatAngle(angles.angleUnit, );
                         }
                     })
-                /*.addData("roll", formatAngle(angles.angleUnit, angles.secondAngle))
-                .addData("pitch", formatAngle(angles.angleUnit, angles.thirdAngle))*/;
+                //.addData("roll", formatAngle(angles.angleUnit, angles.secondAngle))
+                //.addData("pitch", formatAngle(angles.angleUnit, angles.thirdAngle))
+                ;
         }
-    }
+    }*/
 
     String formatAngle(AngleUnit angleUnit, double angle) {
         return formatDegrees(AngleUnit.DEGREES.fromUnit(angleUnit, angle));

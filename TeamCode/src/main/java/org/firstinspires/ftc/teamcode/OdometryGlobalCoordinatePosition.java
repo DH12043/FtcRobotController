@@ -30,7 +30,7 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
 
     //Position variables used for storage and calculations
     double verticalRightEncoderWheelPosition = 0, verticalLeftEncoderWheelPosition = 0, normalEncoderWheelPosition = 0,  changeInRobotOrientation = 0;
-    private double robotGlobalXCoordinatePosition = 0, robotGlobalYCoordinatePosition = 0, robotOrientationRadians = 0;
+    private double robotGlobalXCoordinatePosition = 0, robotGlobalYCoordinatePosition = 0, robotOrientationRadians = 0/*, robotOrientationRadians2 = 0*/;
     private double previousVerticalRightEncoderWheelPosition = 0, previousVerticalLeftEncoderWheelPosition = 0, prevNormalEncoderWheelPosition = 0;
 
     //Algorithm constants
@@ -52,6 +52,9 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
     BNO055IMU imu;
     Orientation angles;
 
+    //BNO055IMU imu2;
+    //Orientation angles2;
+
     private double previousRobotOrientation;
 
 
@@ -72,6 +75,7 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
         this.horizontalEncoderTickPerDegreeOffset = Double.parseDouble(ReadWriteFile.readFile(horizontalTickOffsetFile).trim());
 
         this.imu = imu;
+
     }
 
     /**
@@ -87,6 +91,9 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
 
         Orientation imuOrientation = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.RADIANS);
         robotOrientationRadians = imuOrientation.firstAngle;
+
+        //Orientation imuOrientation2 = imu2.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.RADIANS);
+        //robotOrientationRadians2 = imuOrientation2.firstAngle;
 
         //Calculate Angle
         //changeInRobotOrientation = previousRobotOrientation - robotOrientationRadians;
@@ -132,6 +139,8 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
      * @return global orientation, in degrees
      */
     public double returnOrientation(){ return Math.toDegrees(robotOrientationRadians) % 360; }
+
+    //public double returnOrientation2(){ return Math.toDegrees(robotOrientationRadians2) % 360; }
 
     /**
      * Stops the position update thread
