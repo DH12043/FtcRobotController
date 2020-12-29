@@ -33,6 +33,12 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
     private double robotGlobalXCoordinatePosition = 0, robotGlobalYCoordinatePosition = 0, robotOrientationRadians = 0/*, robotOrientationRadians2 = 0*/;
     private double previousVerticalRightEncoderWheelPosition = 0, previousVerticalLeftEncoderWheelPosition = 0, prevNormalEncoderWheelPosition = 0;
 
+    private double changeInRobotOrientationOdometry;
+    private double robotOrientationRadiansOdometry;
+
+    private double robotGlobalXCoordinatePositionOdometry;
+    private double robotGlobalYCoordinatePositionOdometry;
+
     //Algorithm constants
     private double robotEncoderWheelDistance;
     private double horizontalEncoderTickPerDegreeOffset;
@@ -96,9 +102,9 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
         //robotOrientationRadians2 = imuOrientation2.firstAngle;
 
         //Calculate Angle
-        //changeInRobotOrientation = previousRobotOrientation - robotOrientationRadians;
         changeInRobotOrientation = (leftChange - rightChange) / (robotEncoderWheelDistance);
-        //robotOrientationRadians = ((robotOrientationRadians + changeInRobotOrientation));
+
+        robotOrientationRadiansOdometry = ((robotOrientationRadiansOdometry + changeInRobotOrientation));
 
         //Get the components of the motion
         normalEncoderWheelPosition = (horizontalEncoder.getCurrentPosition()*normalEncoderPositionMultiplier);
@@ -109,11 +115,12 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
         double n = horizontalChange;
 
         //Calculate and update the position values
-        //robotGlobalXCoordinatePosition = robotGlobalXCoordinatePosition + (p*Math.sin(robotOrientationRadians) + n*Math.cos(robotOrientationRadians));
-        //robotGlobalYCoordinatePosition = robotGlobalYCoordinatePosition + (p*Math.cos(robotOrientationRadians) - n*Math.sin(robotOrientationRadians));
 
         robotGlobalXCoordinatePosition = robotGlobalXCoordinatePosition + (p*Math.sin(robotOrientationRadians) + n*Math.cos(robotOrientationRadians));
         robotGlobalYCoordinatePosition = robotGlobalYCoordinatePosition + (p*Math.cos(robotOrientationRadians) - n*Math.sin(robotOrientationRadians));
+
+        robotGlobalXCoordinatePositionOdometry = robotGlobalXCoordinatePositionOdometry + (p*Math.sin(robotOrientationRadiansOdometry) + n*Math.cos(robotOrientationRadiansOdometry));
+        robotGlobalYCoordinatePositionOdometry = robotGlobalYCoordinatePositionOdometry + (p*Math.cos(robotOrientationRadiansOdometry) - n*Math.sin(robotOrientationRadiansOdometry));
 
         previousVerticalLeftEncoderWheelPosition = verticalLeftEncoderWheelPosition;
         previousVerticalRightEncoderWheelPosition = verticalRightEncoderWheelPosition;
@@ -128,17 +135,24 @@ public class OdometryGlobalCoordinatePosition implements Runnable{
      */
     public double returnXCoordinate(){ return robotGlobalXCoordinatePosition; }
 
+    public double returnXCoordinateOdometry(){ return robotGlobalXCoordinatePositionOdometry; }
+
     /**
      * Returns the robot's global y coordinate
      * @return global y coordinate
      */
     public double returnYCoordinate(){ return -robotGlobalYCoordinatePosition; }
 
+    public double returnYCoordinateOdometry(){ return robotGlobalYCoordinatePositionOdometry; }
+
     /**
      * Returns the robot's global orientation
      * @return global orientation, in degrees
      */
     public double returnOrientation(){ return Math.toDegrees(robotOrientationRadians) % 360; }
+
+    public double returnOrientationOdometry(){ return Math.toDegrees(robotOrientationRadiansOdometry) % 360; }
+
 
     //public double returnOrientation2(){ return Math.toDegrees(robotOrientationRadians2) % 360; }
 

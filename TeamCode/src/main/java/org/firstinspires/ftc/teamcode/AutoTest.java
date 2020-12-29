@@ -57,8 +57,11 @@ public class AutoTest extends OpMode{
     String horizontalEncoderName = "FrontRight";
 
     private double RobotXPosition;
+    private double RobotXPositionOdometry;
     private double RobotYPosition;
+    private double RobotYPositionOdometry;
     private double RobotRotation;
+    private double RobotRotationOdometry;
 
     private double StartingXPosition;
     private double StartingYPosition;
@@ -76,6 +79,10 @@ public class AutoTest extends OpMode{
     private DcMotor FrontLeft;
     private DcMotor BackRight;
     private DcMotor BackLeft;
+
+    private DcMotor IntakeMotor;
+    private DcMotor ShooterMotor;
+    private DcMotor ShooterFeedingMotor;
 
     private double movement_x;
     private double movement_y;
@@ -98,11 +105,25 @@ public class AutoTest extends OpMode{
     private int lastAutoState = NO_STATE;
     private static final int NO_STATE = -1;
     private static final int INIT_STATE = 0;
-    private static final double DECELERATION_START_POINT = 48;
-    private static final double DECELERATION_ZERO_POINT = -6;   // -6
-    private static final double TURNING_DECELERATION_START_POINT = 180;
-    private static final double TURNING_DECELERATION_ZERO_POINT = -5; // -5
+    private static final int SHOOTING_STATE = 10;
+
+
+    private static final double DECELERATION_START_POINT = 24;
+    private static final double DECELERATION_ZERO_POINT = -1;
+    private static final double TURNING_DECELERATION_START_POINT = 100;
+    private static final double TURNING_DECELERATION_ZERO_POINT = -5;
     private static final double X_SPEED_MULTIPLIER = 1;
+
+    //SHOOTER VARIABLES ----------------------------------------------------------------------------
+
+    private boolean firstPressShooterToggleButton = true;
+    private boolean firstPressShooterFeedingToggleButton = true;
+    private boolean firstPressShooterSpeedToggleButton = true;
+    private boolean shooterOn = false;
+    private boolean shooterIsFast = true;
+    private boolean shooterFeedingOn = false;
+
+    private double shooterTicksPerRevolution = 103.6;
 
 
     @Override
@@ -115,6 +136,8 @@ public class AutoTest extends OpMode{
         initializeDriveTrain();
         initializeOdometry();
         initializeIMU();
+
+        initializeShooter();
         telemetry.update();
     }
     public void start() {
@@ -124,6 +147,8 @@ public class AutoTest extends OpMode{
 
         startIMU();
         startOdometry();
+
+        ShooterMotor.setPower(.8);
         telemetry.addData("Status", "Odometry System has started");
         telemetry.update();
     }
@@ -134,12 +159,19 @@ public class AutoTest extends OpMode{
 
         checkOdometry();
 
+        goToPositionByTime(0, 0, .5, .5,0, 3, INIT_STATE, SHOOTING_STATE);
+
         telemetry.update();
     }
 
     @Override
     public void stop() {
-        globalPositionUpdate.stop();
+        if (globalPositionUpdate != null) {
+            globalPositionUpdate.stop();
+        }
+        if (tfod != null) {
+            tfod.shutdown();
+        }
     }
 
     //Battery --------------------------------------------------------------------------------------
@@ -256,8 +288,8 @@ public class AutoTest extends OpMode{
 
         double fl_power_raw = movement_y+movement_turn+movement_x;
         double bl_power_raw = movement_y+movement_turn-movement_x;
-        double br_power_raw = -movement_y+movement_turn+movement_x;
-        double fr_power_raw = -movement_y+movement_turn-movement_x;
+        double br_power_raw = -movement_y+movement_turn-movement_x;
+        double fr_power_raw = -movement_y+movement_turn+movement_x;
 
         //find the maximum of the powers
         double maxRawPower = Math.abs(fl_power_raw);
@@ -323,21 +355,21 @@ public class AutoTest extends OpMode{
     }
 
     private void checkOdometry() {
-        RobotXPosition = (globalPositionUpdate.returnXCoordinate() / COUNTS_PER_INCH) + StartingXPosition;
-        RobotYPosition = (globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH) + StartingYPosition;
-        RobotRotation = (globalPositionUpdate.returnOrientation()) + StartingRotation;
+        RobotXPositionOdometry = (globalPositionUpdate.returnXCoordinateOdometry() / COUNTS_PER_INCH) + StartingXPosition;
+        RobotYPositionOdometry = -(globalPositionUpdate.returnYCoordinateOdometry() / COUNTS_PER_INCH) + StartingYPosition;
+        RobotRotationOdometry = (globalPositionUpdate.returnOrientationOdometry()) + StartingRotation;
 
-        if (RobotRotation < 0){
-            RobotRotation += 360;
+        if (RobotRotationOdometry < 0){
+            RobotRotationOdometry += 360;
         }
 
-        double robotXpositionRound = (Math.round (100*RobotXPosition));
-        double robotYpositionRound = (Math.round (100*RobotYPosition));
-        double robotRotationRound = (Math.round (100*RobotRotation));
+        double robotXpositionRoundOdometry = (Math.round (100*RobotXPositionOdometry));
+        double robotYpositionRoundOdometry = (Math.round (100*RobotYPositionOdometry));
+        double robotRotationRoundOdometry = (Math.round (100*RobotRotationOdometry));
 
-        telemetry.addData("X", (robotXpositionRound / 100));
-        telemetry.addData("Y", (robotYpositionRound / 100));
-        telemetry.addData("θ", (robotRotationRound / 100));
+        telemetry.addData("X", (robotXpositionRoundOdometry / 100));
+        telemetry.addData("Y", (robotYpositionRoundOdometry / 100));
+        telemetry.addData("θ", (robotRotationRoundOdometry / 100));
 
         telemetry.addData("Vertical Left Encoder", verticalLeft.getCurrentPosition());
         telemetry.addData("Vertical Right Encoder", verticalRight.getCurrentPosition());
@@ -349,10 +381,10 @@ public class AutoTest extends OpMode{
     //GoToPosition ---------------------------------------------------------------------------------
 
     private void goToPosition(double x, double y, double maxMovementSpeed, double maxTurnSpeed, double preferredAngle) {
-        distanceToTarget = Math.hypot(x-RobotXPosition, y-RobotYPosition);
-        double absoluteAngleToTarget = Math.atan2(y-RobotYPosition, x-RobotXPosition);
+        distanceToTarget = Math.hypot(x-RobotXPositionOdometry, y-RobotYPositionOdometry);
+        double absoluteAngleToTarget = Math.atan2(y-RobotYPositionOdometry, x-RobotXPositionOdometry);
         double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget
-                - Math.toRadians(RobotRotation) + Math.toRadians(90));
+                - Math.toRadians(RobotRotationOdometry) + Math.toRadians(90));
 
         double relativeXToPoint = 2 * Math.sin(relativeAngleToPoint);
         double relativeYToPoint = Math.cos(relativeAngleToPoint);
@@ -364,7 +396,7 @@ public class AutoTest extends OpMode{
                 / (DECELERATION_START_POINT - DECELERATION_ZERO_POINT)), 0, 1);
         double xDecelLimiter = Range.clip(yDecelLimiter * X_SPEED_MULTIPLIER, 0, 1);
 
-        double relativeTurnAngle = AngleWrap(Math.toRadians(preferredAngle)-Math.toRadians(RobotRotation));
+        double relativeTurnAngle = AngleWrap(Math.toRadians(preferredAngle)-Math.toRadians(RobotRotationOdometry));
         double turnDecelLimiter = Range.clip((Math.abs(Math.toDegrees(relativeTurnAngle)) - TURNING_DECELERATION_ZERO_POINT)
                 / (TURNING_DECELERATION_START_POINT - TURNING_DECELERATION_ZERO_POINT), 0, 1);
 
@@ -376,7 +408,7 @@ public class AutoTest extends OpMode{
         } else {
             //movement_turn = Range.clip(Range.clip(relativeTurnAngle / Math.toRadians(30),
             //        -1, 1) * maxTurnSpeed, -turnDecelLimiter, turnDecelLimiter);
-            movement_turn = Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
+            movement_turn = -Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
         }
         telemetry.addData("relativeTurnAngle", relativeTurnAngle);
         telemetry.addData("turnDecelLimiter", turnDecelLimiter);
@@ -490,6 +522,18 @@ public class AutoTest extends OpMode{
 
     String formatDegrees(double degrees){
         return String.format(Locale.getDefault(), "%.1f", AngleUnit.DEGREES.normalize(degrees));
+    }
+
+    //SHOOTER --------------------------------------------------------------------------------------
+
+    private void initializeShooter() {
+        ShooterMotor = hardwareMap.dcMotor.get("ShooterMotor");
+        ShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        ShooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        ShooterFeedingMotor = hardwareMap.dcMotor.get("ShooterFeedingMotor");
+        ShooterFeedingMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        ShooterFeedingMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
 }

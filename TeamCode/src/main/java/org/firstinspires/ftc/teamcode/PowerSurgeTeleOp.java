@@ -45,8 +45,11 @@ public class PowerSurgeTeleOp extends OpMode {
     String horizontalEncoderName = "FrontRight";
 
     private double RobotXPosition;
+    private double RobotXPositionOdometry;
     private double RobotYPosition;
+    private double RobotYPositionOdometry;
     private double RobotRotation;
+    private double RobotRotationOdometry;
     //private double RobotRotation2;
 
     private double StartingXPosition;
@@ -64,7 +67,7 @@ public class PowerSurgeTeleOp extends OpMode {
     final double COUNTS_PER_INCH = 307.699557;
 
     private static final double DECELERATION_START_POINT = 24;
-    private static final double DECELERATION_ZERO_POINT = -6;
+    private static final double DECELERATION_ZERO_POINT = -1;
     private static final double TURNING_DECELERATION_START_POINT = 100;
     private static final double TURNING_DECELERATION_ZERO_POINT = -5;
     private static final double X_SPEED_MULTIPLIER = 1;
@@ -167,7 +170,7 @@ public class PowerSurgeTeleOp extends OpMode {
         driveToLaunchButton = gamepad1.right_bumper;
 
         if(driveToLaunchButton) {
-            goToPosition(5, 48, .75, .5, 0);
+            goToPositionOdometry(-8, 69, .6, .4, 332.8);
         }
         else {
             movement_y = DeadModifier(-gamepad1.left_stick_y);
@@ -308,12 +311,19 @@ public class PowerSurgeTeleOp extends OpMode {
 
     private void checkOdometry() {
         RobotXPosition = (globalPositionUpdate.returnXCoordinate() / COUNTS_PER_INCH) + StartingXPosition;
+        RobotXPositionOdometry = (globalPositionUpdate.returnXCoordinateOdometry() / COUNTS_PER_INCH) + StartingXPosition;
         RobotYPosition = (globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH) + StartingYPosition;
+        RobotYPositionOdometry = -(globalPositionUpdate.returnYCoordinateOdometry() / COUNTS_PER_INCH) + StartingYPosition;
         RobotRotation = (globalPositionUpdate.returnOrientation()) + StartingRotation;
+        RobotRotationOdometry = (globalPositionUpdate.returnOrientationOdometry()) + StartingRotation;
         //RobotRotation2 = (globalPositionUpdate.returnOrientation2()) + StartingRotation;
 
         if (RobotRotation < 0){
             RobotRotation += 360;
+        }
+
+        if (RobotRotationOdometry < 0){
+            RobotRotationOdometry += 360;
         }
 
         /*if (RobotRotation2 < 0){
@@ -321,14 +331,19 @@ public class PowerSurgeTeleOp extends OpMode {
         }*/
 
         double robotXpositionRound = (Math.round (100*RobotXPosition));
+        double robotXpositionOdometryRound = (Math.round (100*RobotXPositionOdometry));
         double robotYpositionRound = (Math.round (100*RobotYPosition));
+        double robotYpositionOdometryRound = (Math.round (100*RobotYPositionOdometry));
         double robotRotationRound = (Math.round (100*RobotRotation));
-        //double robotRotation2Round = (Math.round (100*RobotRotation2));
+        double robotRotationOdometryRound = (Math.round (100*RobotRotationOdometry));
 
         telemetry.addData("X", (robotXpositionRound / 100));
         telemetry.addData("Y", (robotYpositionRound / 100));
         telemetry.addData("θ", (robotRotationRound / 100));
-        //telemetry.addData("θ", (robotRotation2Round / 100));
+
+        telemetry.addData("X Odometry", (robotXpositionOdometryRound / 100));
+        telemetry.addData("Y Odometry", (robotYpositionOdometryRound / 100));
+        telemetry.addData("θ Odometry", (robotRotationOdometryRound / 100));
 
         telemetry.addData("Vertical Left Encoder", verticalLeft.getCurrentPosition());
         telemetry.addData("Vertical Right Encoder", verticalRight.getCurrentPosition());
@@ -367,7 +382,50 @@ public class PowerSurgeTeleOp extends OpMode {
         } else {
             //movement_turn = Range.clip(Range.clip(relativeTurnAngle / Math.toRadians(30),
             //        -1, 1) * maxTurnSpeed, -turnDecelLimiter, turnDecelLimiter);
-            movement_turn = Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
+            movement_turn = -Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
+        }
+        telemetry.addData("relativeTurnAngle", relativeTurnAngle);
+        telemetry.addData("turnDecelLimiter", turnDecelLimiter);
+        telemetry.addData("relativeXToPoint", relativeXToPoint);
+        telemetry.addData("relativeYToPoint", relativeYToPoint);
+        telemetry.addData("X Movement", movement_x);
+        telemetry.addData("Y Movement", movement_y);
+        telemetry.addData("Turn Movement", movement_turn);
+
+        lastDistanceToTarget = distanceToTarget;
+
+        applyMovement();
+    }
+
+    private void goToPositionOdometry(double x, double y, double maxMovementSpeed, double maxTurnSpeed, double preferredAngle) {
+        distanceToTarget = Math.hypot(x-RobotXPositionOdometry, y-RobotYPositionOdometry);
+        double absoluteAngleToTarget = Math.atan2(y-RobotYPositionOdometry, x-RobotXPositionOdometry);
+        double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget
+                - Math.toRadians(RobotRotationOdometry) + Math.toRadians(90));
+
+        double relativeXToPoint = 2 * Math.sin(relativeAngleToPoint);
+        double relativeYToPoint = Math.cos(relativeAngleToPoint);
+
+        double movementXPower = relativeXToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
+        double movementYPower = relativeYToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
+
+        double yDecelLimiter = Range.clip(Math.abs((distanceToTarget - DECELERATION_ZERO_POINT)
+                / (DECELERATION_START_POINT - DECELERATION_ZERO_POINT)), 0, 1);
+        double xDecelLimiter = Range.clip(yDecelLimiter * X_SPEED_MULTIPLIER, 0, 1);
+
+        double relativeTurnAngle = AngleWrap(Math.toRadians(preferredAngle)-Math.toRadians(RobotRotationOdometry));
+        double turnDecelLimiter = Range.clip((Math.abs(Math.toDegrees(relativeTurnAngle)) - TURNING_DECELERATION_ZERO_POINT)
+                / (TURNING_DECELERATION_START_POINT - TURNING_DECELERATION_ZERO_POINT), 0, 1);
+
+        movement_x = movementXPower * Range.clip(maxMovementSpeed, -xDecelLimiter, xDecelLimiter);
+        movement_y = movementYPower * Range.clip(maxMovementSpeed, -yDecelLimiter, yDecelLimiter);
+
+        if (distanceToTarget < 1) {
+            movement_turn = 0;
+        } else {
+            //movement_turn = Range.clip(Range.clip(relativeTurnAngle / Math.toRadians(30),
+            //        -1, 1) * maxTurnSpeed, -turnDecelLimiter, turnDecelLimiter);
+            movement_turn = -Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
         }
         telemetry.addData("relativeTurnAngle", relativeTurnAngle);
         telemetry.addData("turnDecelLimiter", turnDecelLimiter);
