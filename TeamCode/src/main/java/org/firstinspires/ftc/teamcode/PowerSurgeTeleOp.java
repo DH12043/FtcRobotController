@@ -130,6 +130,10 @@ public class PowerSurgeTeleOp extends OpMode {
     private DcMotor ShooterMotor;
     private DcMotor ShooterFeedingMotor;
 
+    private Servo ShooterFeedingServo;
+
+    private CRServo TransferServo;
+
     //LPS COUNTER ----------------------------------------------------------------------------------
 
     private int loopCount;
@@ -591,6 +595,12 @@ public class PowerSurgeTeleOp extends OpMode {
         ShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         ShooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
+        TransferServo = hardwareMap.crservo.get("TransferServo");
+
+        ShooterFeedingServo = hardwareMap.servo.get("ShooterFeedingServo");
+
+        ShooterFeedingServo.setPosition(0);
+
         ShooterFeedingMotor = hardwareMap.dcMotor.get("ShooterFeedingMotor");
         ShooterFeedingMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         ShooterFeedingMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -667,9 +677,12 @@ public class PowerSurgeTeleOp extends OpMode {
 
             if(shooterFeedingOn) {
                 ShooterFeedingMotor.setPower(-1);
+                TransferServo.setPower(1);
+
             }
             else{
                 ShooterFeedingMotor.setPower(0);
+                TransferServo.setPower(0);
             }
         }
 

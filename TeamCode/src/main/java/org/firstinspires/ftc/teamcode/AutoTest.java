@@ -159,7 +159,7 @@ public class AutoTest extends OpMode{
 
         checkOdometry();
 
-        goToPositionByTime(0, 0, .5, .5,0, 3, INIT_STATE, SHOOTING_STATE);
+        goToPositionByTime(-8.6, 45, .5, .5,333, 3, INIT_STATE, SHOOTING_STATE);
 
         telemetry.update();
     }
