@@ -106,6 +106,10 @@ public class PowerSurgeTeleOp extends OpMode {
     private boolean firstPressIntakeToggleButton = true;
     private boolean intakeOn = false;
 
+    //Wobble Variables -----------------------------------------------------------------------------
+    private boolean firstPressWobbleButton = true;
+    private boolean wobbleUp = true;
+
     //GAMEPAD IMPUTS -------------------------------------------------------------------------------
 
     private double movement_x;
@@ -118,6 +122,7 @@ public class PowerSurgeTeleOp extends OpMode {
     private double whileHoldingFeedShooterButton;
     private boolean intakeToggleButton;
     private boolean driveToLaunchButton;
+    private boolean wobbleButton;
 
    //MOTORS AND SERVOS -----------------------------------------------------------------------------
 
@@ -129,6 +134,8 @@ public class PowerSurgeTeleOp extends OpMode {
     private DcMotor IntakeMotor;
     private DcMotor ShooterMotor;
     private DcMotor ShooterFeedingMotor;
+
+    private DcMotor WobbleMotor;
 
     private Servo ShooterFeedingServo;
 
@@ -145,6 +152,8 @@ public class PowerSurgeTeleOp extends OpMode {
 
     private long lastUpdateTime = 0;
 
+    private double startShooterFeedingTime;
+
     @Override
     public void init() {
         telemetry.addData("Version Number", "12/22/20");
@@ -154,6 +163,7 @@ public class PowerSurgeTeleOp extends OpMode {
         initializeDistanceSensors();
         initializeShooter();
         initializeIntake();
+        initializeWobble();
         telemetry.addData("Status", "Init Complete");
         telemetry.update();
     }
@@ -185,6 +195,7 @@ public class PowerSurgeTeleOp extends OpMode {
         shooterToggleButton = gamepad1.a;
         shooterFeedingToggleButton = gamepad1.x;
         intakeToggleButton = gamepad1.b;
+        wobbleButton = gamepad1.dpad_up;
         shooterSpeedToggleButton = gamepad1.y;
         whileHoldingFeedShooterButton = gamepad1.right_trigger;
 
@@ -199,6 +210,7 @@ public class PowerSurgeTeleOp extends OpMode {
         double currentTimeAtRunIntake = getRuntime();
         runIntake();
         double currentTimeAfterRunIntake = getRuntime();
+        runWobble();
 
         telemetry.addData("LPS and drivetrain", "%.1f", (currentTimeAtApplyMovement-currentTimeAtCheckLPS) * 1000);
         telemetry.addData("Apply Movement", "%.1f", (currentTimeAtCheckOdometry-currentTimeAtApplyMovement) * 1000);
@@ -668,6 +680,7 @@ public class PowerSurgeTeleOp extends OpMode {
                         shooterFeedingOn = false;
                     } else {
                         shooterFeedingOn = true;
+                        startShooterFeedingTime = currentTime;
                     }
                     firstPressShooterFeedingToggleButton = false;
                 }
@@ -678,11 +691,21 @@ public class PowerSurgeTeleOp extends OpMode {
             if(shooterFeedingOn) {
                 ShooterFeedingMotor.setPower(-1);
                 TransferServo.setPower(1);
-
+                if ((currentTime - startShooterFeedingTime) < 1) {
+                    ShooterFeedingServo.setPosition(1/6);
+                }
+                else if ((currentTime - startShooterFeedingTime) < 2) {
+                    ShooterFeedingServo.setPosition(0);
+                }
+                else {
+                    startShooterFeedingTime = currentTime;
+                    ShooterFeedingServo.setPosition(1/6);
+                }
             }
             else{
                 ShooterFeedingMotor.setPower(0);
                 TransferServo.setPower(0);
+                ShooterFeedingServo.setPosition(0);
             }
         }
 
@@ -715,6 +738,37 @@ public class PowerSurgeTeleOp extends OpMode {
             firstPressIntakeToggleButton = true;
         }
     }
+
+    //Wobble ---------------------------------------------------------------------------------------
+
+    private void initializeWobble() {
+        WobbleMotor = hardwareMap.dcMotor.get("WobbleMotor");
+        WobbleMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        WobbleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    }
+    private void startWobble() {
+        WobbleMotor.setPower(1);
+        WobbleMotor.setTargetPosition(0);
+    }
+    private void runWobble() {
+        if (wobbleButton) {
+            if (firstPressWobbleButton) {
+                if (wobbleUp) {
+                    WobbleMotor.setTargetPosition(420);
+                    wobbleUp = false;
+                }
+                else {
+                    WobbleMotor.setTargetPosition(0);
+                    wobbleUp = false;
+                }
+                firstPressWobbleButton = false;
+            }
+        }
+        else {
+            firstPressWobbleButton = true;
+        }
+    }
+
 
     //Check LPS ------------------------------------------------------------------------------------
 
