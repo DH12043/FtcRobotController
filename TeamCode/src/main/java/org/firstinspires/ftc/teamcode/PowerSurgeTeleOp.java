@@ -109,6 +109,7 @@ public class PowerSurgeTeleOp extends OpMode {
     //Wobble Variables -----------------------------------------------------------------------------
     private boolean firstPressWobbleButton = true;
     private boolean wobbleUp = true;
+    private boolean slowDriveSpeed = false;
 
     //GAMEPAD IMPUTS -------------------------------------------------------------------------------
 
@@ -172,6 +173,7 @@ public class PowerSurgeTeleOp extends OpMode {
     public void start() {
         startIMU();
         startOdometry();
+        startWobble();
         telemetry.addData("Status", "Odometry System has started");
         telemetry.update();
     }
@@ -185,6 +187,11 @@ public class PowerSurgeTeleOp extends OpMode {
 
         if(driveToLaunchButton) {
             goToPositionOdometry(-8, 69, .6, .4, 332.8);
+        }
+        else if(slowDriveSpeed) {
+            movement_y = .5 * DeadModifier(-gamepad1.left_stick_y);
+            movement_x = .5 * DeadModifier(gamepad1.left_stick_x);
+            movement_turn = .5 * DeadModifier(.75 * gamepad1.right_stick_x);
         }
         else {
             movement_y = DeadModifier(-gamepad1.left_stick_y);
@@ -728,7 +735,7 @@ public class PowerSurgeTeleOp extends OpMode {
                     intakeOn = false;
                 }
                 else {
-                    IntakeMotor.setPower(1);
+                    IntakeMotor.setPower(-1);
                     intakeOn = true;
                 }
                 firstPressIntakeToggleButton = false;
@@ -744,22 +751,27 @@ public class PowerSurgeTeleOp extends OpMode {
     private void initializeWobble() {
         WobbleMotor = hardwareMap.dcMotor.get("WobbleMotor");
         WobbleMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        WobbleMotor.setTargetPosition(0);
         WobbleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        WobbleMotor.setPower(.5);
     }
     private void startWobble() {
-        WobbleMotor.setPower(1);
-        WobbleMotor.setTargetPosition(0);
+        WobbleMotor.setTargetPosition(100);
     }
     private void runWobble() {
         if (wobbleButton) {
             if (firstPressWobbleButton) {
                 if (wobbleUp) {
-                    WobbleMotor.setTargetPosition(420);
+                    WobbleMotor.setPower(.5);
+                    WobbleMotor.setTargetPosition(700);
+                    slowDriveSpeed = true;
                     wobbleUp = false;
                 }
                 else {
-                    WobbleMotor.setTargetPosition(0);
-                    wobbleUp = false;
+                    WobbleMotor.setPower(.2);
+                    WobbleMotor.setTargetPosition(200);
+                    slowDriveSpeed = false;
+                    wobbleUp = true;
                 }
                 firstPressWobbleButton = false;
             }
