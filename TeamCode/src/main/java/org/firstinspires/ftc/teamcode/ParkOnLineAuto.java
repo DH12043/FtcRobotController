@@ -31,8 +31,8 @@ import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 //B: (2,5 on dice) Middle - 1 rings
 //C: (3,6 on dice) Far - 4 rings
 
-@Autonomous(name = "AutoTest")
-public class AutoTest extends OpMode{
+@Autonomous(name = "ParkOnLineAuto")
+public class ParkOnLineAuto extends OpMode{
 
     private int path;
 
@@ -105,8 +105,8 @@ public class AutoTest extends OpMode{
     private int lastAutoState = NO_STATE;
     private static final int NO_STATE = -1;
     private static final int INIT_STATE = 0;
-    private static final int SHOOTING_STATE = 10;
-
+    private static final int DRIVE_TO_WOBBLE = 10;
+    private static final int DRIVE_TO_LINE = 20;
 
     private static final double DECELERATION_START_POINT = 24;
     private static final double DECELERATION_ZERO_POINT = -1;
@@ -148,7 +148,7 @@ public class AutoTest extends OpMode{
         startIMU();
         startOdometry();
 
-        ShooterMotor.setPower(.8);
+        //ShooterMotor.setPower(.8);
         telemetry.addData("Status", "Odometry System has started");
         telemetry.update();
     }
@@ -159,7 +159,8 @@ public class AutoTest extends OpMode{
 
         checkOdometry();
 
-        goToPositionByTime(-8.6, 45, .5, .5,333, 3, INIT_STATE, SHOOTING_STATE);
+        goToPositionByTime(0, 84, .25, .25,0,10, INIT_STATE, DRIVE_TO_WOBBLE);
+        goToPositionByTime(0, 72, .25, .25,0,20, DRIVE_TO_WOBBLE, DRIVE_TO_LINE);
 
         telemetry.update();
     }

@@ -110,6 +110,8 @@ public class PowerSurgeTeleOp extends OpMode {
     private boolean firstPressWobbleButton = true;
     private boolean wobbleUp = true;
     private boolean slowDriveSpeed = false;
+    private int globalWobbleOffset = 0;
+    private boolean wobbleHasMoved = false;
 
     //GAMEPAD IMPUTS -------------------------------------------------------------------------------
 
@@ -124,6 +126,8 @@ public class PowerSurgeTeleOp extends OpMode {
     private boolean intakeToggleButton;
     private boolean driveToLaunchButton;
     private boolean wobbleButton;
+    private boolean wobbleOffsetUp;
+    private double wobbleOffsetDown;
 
    //MOTORS AND SERVOS -----------------------------------------------------------------------------
 
@@ -186,7 +190,7 @@ public class PowerSurgeTeleOp extends OpMode {
         driveToLaunchButton = gamepad1.right_bumper;
 
         if(driveToLaunchButton) {
-            goToPositionOdometry(-8, 69, .6, .4, 332.8);
+            goToPositionOdometry(0, 0, 1, 1, 0);
         }
         else if(slowDriveSpeed) {
             movement_y = .5 * DeadModifier(-gamepad1.left_stick_y);
@@ -205,6 +209,8 @@ public class PowerSurgeTeleOp extends OpMode {
         wobbleButton = gamepad1.dpad_up;
         shooterSpeedToggleButton = gamepad1.y;
         whileHoldingFeedShooterButton = gamepad1.right_trigger;
+        wobbleOffsetUp = gamepad1.left_bumper;
+        wobbleOffsetDown = gamepad1.left_trigger;
 
         double currentTimeAtApplyMovement = getRuntime();
         applyMovement();
@@ -750,6 +756,7 @@ public class PowerSurgeTeleOp extends OpMode {
 
     private void initializeWobble() {
         WobbleMotor = hardwareMap.dcMotor.get("WobbleMotor");
+        WobbleMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         WobbleMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         WobbleMotor.setTargetPosition(0);
         WobbleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -758,27 +765,47 @@ public class PowerSurgeTeleOp extends OpMode {
     private void startWobble() {
         WobbleMotor.setTargetPosition(100);
     }
+
     private void runWobble() {
+        if (wobbleOffsetUp == true) {
+            globalWobbleOffset = globalWobbleOffset - 3;
+        }
+        else if (wobbleOffsetDown > .5) {
+            globalWobbleOffset = globalWobbleOffset + 3;
+        }
+
         if (wobbleButton) {
             if (firstPressWobbleButton) {
                 if (wobbleUp) {
                     WobbleMotor.setPower(.5);
-                    WobbleMotor.setTargetPosition(700);
+                    //WobbleMotor.setTargetPosition(675 + globalWobbleOffset);
                     slowDriveSpeed = true;
                     wobbleUp = false;
                 }
                 else {
                     WobbleMotor.setPower(.2);
-                    WobbleMotor.setTargetPosition(200);
+                    //WobbleMotor.setTargetPosition(200 + globalWobbleOffset);
                     slowDriveSpeed = false;
                     wobbleUp = true;
                 }
                 firstPressWobbleButton = false;
             }
+            wobbleHasMoved = true;
         }
         else {
             firstPressWobbleButton = true;
         }
+
+        if (wobbleHasMoved) {
+            if (wobbleUp) {
+                WobbleMotor.setTargetPosition(200 + globalWobbleOffset);
+            } else {
+                WobbleMotor.setTargetPosition(685 + globalWobbleOffset);
+            }
+        }
+
+        telemetry.addData("Wobble Position", WobbleMotor.getCurrentPosition());
+        telemetry.addData("GlobalWobbleOffset", globalWobbleOffset);
     }
 
 
