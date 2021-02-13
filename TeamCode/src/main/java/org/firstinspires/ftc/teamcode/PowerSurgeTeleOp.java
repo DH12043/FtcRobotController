@@ -41,8 +41,8 @@ public class PowerSurgeTeleOp extends OpMode {
     DcMotor verticalRight, verticalLeft, horizontal;
 
     String verticalLeftEncoderName = "FrontLeft";
-    String verticalRightEncoderName = "BackRight";
-    String horizontalEncoderName = "FrontRight";
+    String verticalRightEncoderName = "FrontRight";
+    String horizontalEncoderName = "BackRight";
 
     private double RobotXPosition;
     private double RobotXPositionOdometry;
@@ -272,8 +272,8 @@ public class PowerSurgeTeleOp extends OpMode {
 
         double fl_power_raw = movement_y+movement_turn+movement_x;
         double bl_power_raw = movement_y+movement_turn-movement_x;
-        double br_power_raw = -movement_y+movement_turn+movement_x;
-        double fr_power_raw = -movement_y+movement_turn-movement_x;
+        double br_power_raw = -movement_y+movement_turn-movement_x;
+        double fr_power_raw = -movement_y+movement_turn+movement_x;
 
         //find the maximum of the powers
         double maxRawPower = Math.abs(fl_power_raw);
@@ -411,7 +411,7 @@ public class PowerSurgeTeleOp extends OpMode {
         } else {
             //movement_turn = Range.clip(Range.clip(relativeTurnAngle / Math.toRadians(30),
             //        -1, 1) * maxTurnSpeed, -turnDecelLimiter, turnDecelLimiter);
-            movement_turn = -Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
+            movement_turn = Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
         }
         telemetry.addData("relativeTurnAngle", relativeTurnAngle);
         telemetry.addData("turnDecelLimiter", turnDecelLimiter);

@@ -53,8 +53,8 @@ public class ParkOnLineAuto extends OpMode{
     DcMotor verticalRight, verticalLeft, horizontal;
 
     String verticalLeftEncoderName = "FrontLeft";
-    String verticalRightEncoderName = "BackRight";
-    String horizontalEncoderName = "FrontRight";
+    String verticalRightEncoderName = "FrontRight";
+    String horizontalEncoderName = "BackRight";
 
     private double RobotXPosition;
     private double RobotXPositionOdometry;

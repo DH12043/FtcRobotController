@@ -54,8 +54,8 @@ public class ScoreRingsInLowGoal extends OpMode{
     DcMotor verticalRight, verticalLeft, horizontal;
 
     String verticalLeftEncoderName = "FrontLeft";
-    String verticalRightEncoderName = "BackRight";
-    String horizontalEncoderName = "FrontRight";
+    String verticalRightEncoderName = "FrontRight";
+    String horizontalEncoderName = "BackRight";
 
     private double RobotXPosition;
     private double RobotXPositionOdometry;
@@ -319,8 +319,8 @@ public class ScoreRingsInLowGoal extends OpMode{
 
         double fl_power_raw = movement_y+movement_turn+movement_x;
         double bl_power_raw = movement_y+movement_turn-movement_x;
-        double br_power_raw = -movement_y+movement_turn+movement_x;
-        double fr_power_raw = -movement_y+movement_turn-movement_x;
+        double br_power_raw = -movement_y+movement_turn-movement_x;
+        double fr_power_raw = -movement_y+movement_turn+movement_x;
 
         //find the maximum of the powers
         double maxRawPower = Math.abs(fl_power_raw);
