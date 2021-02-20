@@ -741,7 +741,7 @@ public class PowerSurgeTeleOp extends OpMode {
                     intakeOn = false;
                 }
                 else {
-                    IntakeMotor.setPower(-1);
+                    IntakeMotor.setPower(-.5);
                     intakeOn = true;
                 }
                 firstPressIntakeToggleButton = false;

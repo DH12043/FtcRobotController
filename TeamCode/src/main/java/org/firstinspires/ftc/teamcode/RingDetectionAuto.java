@@ -444,11 +444,19 @@ public class RingDetectionAuto extends OpMode{
         double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget
                 - Math.toRadians(RobotRotationOdometry) + Math.toRadians(90));
 
+        double inverseRelativeAngleToPoint = 360 - relativeAngleToPoint;
+
         double relativeXToPoint = 2 * Math.sin(relativeAngleToPoint);
         double relativeYToPoint = Math.cos(relativeAngleToPoint);
 
+        double inverseRelativeXToPoint = 2 * Math.sin(inverseRelativeAngleToPoint);
+        double inverseRelativeYToPoint = Math.cos(inverseRelativeAngleToPoint);
+
         double movementXPower = relativeXToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
         double movementYPower = relativeYToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
+
+        double inverseMovementXPower = inverseRelativeXToPoint / (Math.abs(inverseRelativeXToPoint) + Math.abs(inverseRelativeYToPoint));
+        double inverseMovementYPower = inverseRelativeYToPoint / (Math.abs(inverseRelativeXToPoint) + Math.abs(inverseRelativeYToPoint));
 
         double yDecelLimiter = Range.clip(Math.abs((distanceToTarget - DECELERATION_ZERO_POINT)
                 / (DECELERATION_START_POINT - DECELERATION_ZERO_POINT)), 0, 1);
@@ -460,6 +468,9 @@ public class RingDetectionAuto extends OpMode{
 
         movement_x = movementXPower * Range.clip(maxMovementSpeed, -xDecelLimiter, xDecelLimiter);
         movement_y = movementYPower * Range.clip(maxMovementSpeed, -yDecelLimiter, yDecelLimiter);
+
+        //movement_x = inverseMovementXPower * Range.clip(maxMovementSpeed, -xDecelLimiter, xDecelLimiter);
+        //movement_y = inverseMovementYPower * Range.clip(maxMovementSpeed, -yDecelLimiter, yDecelLimiter);
 
         if (distanceToTarget < 1) {
             movement_turn = 0;
