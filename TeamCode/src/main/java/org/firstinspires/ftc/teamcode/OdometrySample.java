@@ -79,7 +79,7 @@ public class OdometrySample extends LinearOpMode {
          */
 
         //Create and start GlobalCoordinatePosition thread to constantly update the global coordinate positions\
-        OdometryGlobalCoordinatePosition globalPositionUpdate = new OdometryGlobalCoordinatePosition(verticalLeft, verticalRight, horizontal, COUNTS_PER_INCH, 25, imu);
+        OdometryGlobalCoordinatePosition globalPositionUpdate = new OdometryGlobalCoordinatePosition(verticalLeft, verticalRight, horizontal, COUNTS_PER_INCH, 25);
         Thread positionThread = new Thread(globalPositionUpdate);
         positionThread.start();
 

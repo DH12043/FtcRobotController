@@ -58,11 +58,8 @@ public class RingDetectionAuto extends OpMode{
     String horizontalEncoderName = "BackRight";
 
     private double RobotXPosition;
-    private double RobotXPositionOdometry;
     private double RobotYPosition;
-    private double RobotYPositionOdometry;
     private double RobotRotation;
-    private double RobotRotationOdometry;
 
     private double StartingXPosition;
     private double StartingYPosition;
@@ -179,7 +176,7 @@ public class RingDetectionAuto extends OpMode{
 
         //startWobble();
 
-        ShooterMotor.setPower(.8);
+        ShooterMotor.setPower(.7);
 
         startIMU();
         startOdometry();
@@ -192,9 +189,9 @@ public class RingDetectionAuto extends OpMode{
         currentTime = getRuntime();
 
         checkOdometry();
-
-        goToPositionByTime(16, 1, .3, .3, 0, 3, INIT_STATE, STARTING_DRIVE);
-        goToPositionByTime(16, 58, .3, .3, 0, 4, STARTING_DRIVE, SECOND_DRIVE);
+        //goToPositionByTime(0, 0, .3, .3, 90, 20, INIT_STATE, STARTING_DRIVE);
+        goToPositionByTime(16, 1, .3, .3, 90, 3, INIT_STATE, STARTING_DRIVE);
+        goToPositionByTime(16, 58, .3, .3, 90, 4, STARTING_DRIVE, SECOND_DRIVE);
         shootOneRing(SECOND_DRIVE, SHOOT_RINGS,1);
 
         if (path == 0){
@@ -204,13 +201,13 @@ public class RingDetectionAuto extends OpMode{
 
         }
         else if (path == 4) {
-            goToPositionByTime(16, 114, .3, .3, 0, 4, SHOOT_RINGS, DRIVE_TO_LOW_GOAL);
-            goToPositionByTime(16, 114, .3, .5, -90, 4, DRIVE_TO_LOW_GOAL, DRIVE_TO_TURN);
-            goToPositionByTime(-16, 116, .3, .3, -90, 4, DRIVE_TO_TURN, RELEASE_WOBBLE);
+            goToPositionByTime(16, 114, .3, .3, 90, 4, SHOOT_RINGS, DRIVE_TO_TURN);
+            //goToPositionByTime(16, 114, .3, .6, 270, 4, DRIVE_TO_LOW_GOAL, DRIVE_TO_TURN);
+            goToPositionByTime(-10, 116, .3, .3, 0, 4, DRIVE_TO_TURN, RELEASE_WOBBLE);
             dropWobbleGoal(RELEASE_WOBBLE, DRIVE_AWAY_FROM_WOBBLE, 1);
-            goToPositionByTime(-10, 116, .3, .3, -90, 4, DRIVE_AWAY_FROM_WOBBLE, DRIVE_BACKWARDS);
+            goToPositionByTime(-5, 116, .3, .3, 0, 4, DRIVE_AWAY_FROM_WOBBLE, DRIVE_BACKWARDS);
             raiseRings(DRIVE_BACKWARDS,DRIVE_TO_LINE,1);
-            goToPositionByTime(-10, 72, .3, .3, -90, 4, DRIVE_TO_LINE, PARK_ON_LINE);
+            goToPositionByTime(-5, 72, .3, .3, 0, 4, DRIVE_TO_LINE, PARK_ON_LINE);
 
         }
         telemetry.addData("Path", path);
@@ -344,10 +341,10 @@ public class RingDetectionAuto extends OpMode{
         }
         lastUpdateTime = currTime;
 
-        double fl_power_raw = movement_y+movement_turn+movement_x;
-        double bl_power_raw = movement_y+movement_turn-movement_x;
-        double br_power_raw = -movement_y+movement_turn-movement_x;
-        double fr_power_raw = -movement_y+movement_turn+movement_x;
+        double fl_power_raw = -movement_y+movement_turn+movement_x;
+        double bl_power_raw = -movement_y+movement_turn-movement_x;
+        double br_power_raw = movement_y+movement_turn-movement_x;
+        double fr_power_raw = movement_y+movement_turn+movement_x;
 
         //find the maximum of the powers
         double maxRawPower = Math.abs(fl_power_raw);
@@ -367,10 +364,10 @@ public class RingDetectionAuto extends OpMode{
         fr_power_raw *= scaleDownAmount;
 
         //now we can set the powers ONLY IF THEY HAVE CHANGED TO AVOID SPAMMING USB COMMUNICATIONS
-        FrontLeft.setPower(fl_power_raw);
+        FrontLeft.setPower(-fl_power_raw);
         BackLeft.setPower(-bl_power_raw);
-        BackRight.setPower(br_power_raw);
-        FrontRight.setPower(fr_power_raw);
+        BackRight.setPower(-br_power_raw);
+        FrontRight.setPower(-fr_power_raw);
     }
 
     //ODOMETRY -------------------------------------------------------------------------------------
@@ -386,10 +383,13 @@ public class RingDetectionAuto extends OpMode{
 
         //These values also affect the drive motors so we also reversed FrontRight
         verticalLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        verticalRight.setDirection(DcMotorSimple.Direction.REVERSE);
         horizontal.setDirection(DcMotorSimple.Direction.REVERSE);
+//        verticalRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
         FrontRight.setDirection(DcMotorSimple.Direction.REVERSE);
+//        BackRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        FrontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        BackLeft.setDirection(DcMotorSimple.Direction.REVERSE);
 
         verticalRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         verticalLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -400,12 +400,12 @@ public class RingDetectionAuto extends OpMode{
         //StartingRotation = Double.parseDouble(ReadWriteFile.readFile(startingθpositionFile).trim());
         StartingXPosition = 0;
         StartingYPosition = 0;
-        StartingRotation = 0;
+        StartingRotation = 90;
 
     }
 
     private void startOdometry() {
-        globalPositionUpdate = new OdometryGlobalCoordinatePosition(verticalLeft, verticalRight, horizontal, COUNTS_PER_INCH, 25, imu);
+        globalPositionUpdate = new OdometryGlobalCoordinatePosition(verticalLeft, verticalRight, horizontal, COUNTS_PER_INCH, 25);
         positionThread = new Thread(globalPositionUpdate);
         positionThread.start();
 
@@ -413,21 +413,21 @@ public class RingDetectionAuto extends OpMode{
     }
 
     private void checkOdometry() {
-        RobotXPositionOdometry = (globalPositionUpdate.returnXCoordinateOdometry() / COUNTS_PER_INCH) + StartingXPosition;
-        RobotYPositionOdometry = -(globalPositionUpdate.returnYCoordinateOdometry() / COUNTS_PER_INCH) + StartingYPosition;
-        RobotRotationOdometry = (globalPositionUpdate.returnOrientationOdometry()) + StartingRotation;
+        RobotXPosition = (globalPositionUpdate.returnXCoordinate() / COUNTS_PER_INCH) + StartingXPosition;
+        RobotYPosition = -(globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH) + StartingYPosition;
+        RobotRotation = (globalPositionUpdate.returnOrientation()) + StartingRotation;
 
-        if (RobotRotationOdometry < 0){
-            RobotRotationOdometry += 360;
+        if (RobotRotation < 0){
+            RobotRotation += 360;
         }
 
-        double robotXpositionRoundOdometry = (Math.round (100*RobotXPositionOdometry));
-        double robotYpositionRoundOdometry = (Math.round (100*RobotYPositionOdometry));
-        double robotRotationRoundOdometry = (Math.round (100*RobotRotationOdometry));
+        double robotXpositionRound = (Math.round (100*RobotXPosition));
+        double robotYpositionRound = (Math.round (100*RobotYPosition));
+        double robotRotationRound = (Math.round (100*RobotRotation));
 
-        telemetry.addData("X", (robotXpositionRoundOdometry / 100));
-        telemetry.addData("Y", (robotYpositionRoundOdometry / 100));
-        telemetry.addData("θ", (robotRotationRoundOdometry / 100));
+        telemetry.addData("X", (robotXpositionRound / 100));
+        telemetry.addData("Y", (robotYpositionRound / 100));
+        telemetry.addData("θ", (robotRotationRound / 100));
 
         telemetry.addData("Vertical Left Encoder", verticalLeft.getCurrentPosition());
         telemetry.addData("Vertical Right Encoder", verticalRight.getCurrentPosition());
@@ -439,45 +439,37 @@ public class RingDetectionAuto extends OpMode{
     //GoToPosition ---------------------------------------------------------------------------------
 
     private void goToPosition(double x, double y, double maxMovementSpeed, double maxTurnSpeed, double preferredAngle) {
-        distanceToTarget = Math.hypot(x-RobotXPositionOdometry, y-RobotYPositionOdometry);
-        double absoluteAngleToTarget = Math.atan2(y-RobotYPositionOdometry, x-RobotXPositionOdometry);
-        double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget
-                - Math.toRadians(RobotRotationOdometry) + Math.toRadians(90));
 
-        double inverseRelativeAngleToPoint = 360 - relativeAngleToPoint;
+//        goToPositionByTime(-10, 116, .3, .3, 270, 4, DRIVE_TO_TURN, RELEASE_WOBBLE);
+
+        distanceToTarget = Math.hypot(x-RobotXPosition, y-RobotYPosition);
+        double absoluteAngleToTarget = Math.atan2(y-RobotYPosition, x-RobotXPosition);
+//        double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget - Math.toRadians(RobotRotation)
+//                + Math.toRadians(90));
+        double relativeAngleToPoint = AngleWrap(absoluteAngleToTarget - Math.toRadians(RobotRotation));
 
         double relativeXToPoint = 2 * Math.sin(relativeAngleToPoint);
         double relativeYToPoint = Math.cos(relativeAngleToPoint);
 
-        double inverseRelativeXToPoint = 2 * Math.sin(inverseRelativeAngleToPoint);
-        double inverseRelativeYToPoint = Math.cos(inverseRelativeAngleToPoint);
-
         double movementXPower = relativeXToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
         double movementYPower = relativeYToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
-
-        double inverseMovementXPower = inverseRelativeXToPoint / (Math.abs(inverseRelativeXToPoint) + Math.abs(inverseRelativeYToPoint));
-        double inverseMovementYPower = inverseRelativeYToPoint / (Math.abs(inverseRelativeXToPoint) + Math.abs(inverseRelativeYToPoint));
 
         double yDecelLimiter = Range.clip(Math.abs((distanceToTarget - DECELERATION_ZERO_POINT)
                 / (DECELERATION_START_POINT - DECELERATION_ZERO_POINT)), 0, 1);
         double xDecelLimiter = Range.clip(yDecelLimiter * X_SPEED_MULTIPLIER, 0, 1);
 
-        double relativeTurnAngle = AngleWrap(Math.toRadians(preferredAngle)-Math.toRadians(RobotRotationOdometry));
+        double relativeTurnAngle = AngleWrap(Math.toRadians(preferredAngle)-Math.toRadians(RobotRotation));
         double turnDecelLimiter = Range.clip((Math.abs(Math.toDegrees(relativeTurnAngle)) - TURNING_DECELERATION_ZERO_POINT)
                 / (TURNING_DECELERATION_START_POINT - TURNING_DECELERATION_ZERO_POINT), 0, 1);
 
         movement_x = movementXPower * Range.clip(maxMovementSpeed, -xDecelLimiter, xDecelLimiter);
         movement_y = movementYPower * Range.clip(maxMovementSpeed, -yDecelLimiter, yDecelLimiter);
 
-        //movement_x = inverseMovementXPower * Range.clip(maxMovementSpeed, -xDecelLimiter, xDecelLimiter);
-        //movement_y = inverseMovementYPower * Range.clip(maxMovementSpeed, -yDecelLimiter, yDecelLimiter);
-
         if (distanceToTarget < 1) {
             movement_turn = 0;
-        } else {
-            //movement_turn = Range.clip(Range.clip(relativeTurnAngle / Math.toRadians(30),
-            //        -1, 1) * maxTurnSpeed, -turnDecelLimiter, turnDecelLimiter);
-            movement_turn = -Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
+        }
+        else {
+            movement_turn = Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
         }
         telemetry.addData("relativeTurnAngle", relativeTurnAngle);
         telemetry.addData("turnDecelLimiter", turnDecelLimiter);

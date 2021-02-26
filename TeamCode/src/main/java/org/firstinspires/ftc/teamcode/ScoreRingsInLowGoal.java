@@ -58,11 +58,8 @@ public class ScoreRingsInLowGoal extends OpMode{
     String horizontalEncoderName = "BackRight";
 
     private double RobotXPosition;
-    private double RobotXPositionOdometry;
     private double RobotYPosition;
-    private double RobotYPositionOdometry;
     private double RobotRotation;
-    private double RobotRotationOdometry;
 
     private double StartingXPosition;
     private double StartingYPosition;
@@ -378,7 +375,7 @@ public class ScoreRingsInLowGoal extends OpMode{
     }
 
     private void startOdometry() {
-        globalPositionUpdate = new OdometryGlobalCoordinatePosition(verticalLeft, verticalRight, horizontal, COUNTS_PER_INCH, 25, imu);
+        globalPositionUpdate = new OdometryGlobalCoordinatePosition(verticalLeft, verticalRight, horizontal, COUNTS_PER_INCH, 25);
         positionThread = new Thread(globalPositionUpdate);
         positionThread.start();
 
@@ -386,21 +383,21 @@ public class ScoreRingsInLowGoal extends OpMode{
     }
 
     private void checkOdometry() {
-        RobotXPositionOdometry = (globalPositionUpdate.returnXCoordinateOdometry() / COUNTS_PER_INCH) + StartingXPosition;
-        RobotYPositionOdometry = -(globalPositionUpdate.returnYCoordinateOdometry() / COUNTS_PER_INCH) + StartingYPosition;
-        RobotRotationOdometry = (globalPositionUpdate.returnOrientationOdometry()) + StartingRotation;
+        RobotXPosition = (globalPositionUpdate.returnXCoordinate() / COUNTS_PER_INCH) + StartingXPosition;
+        RobotYPosition = -(globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH) + StartingYPosition;
+        RobotRotation = (globalPositionUpdate.returnOrientation()) + StartingRotation;
 
-        if (RobotRotationOdometry < 0){
-            RobotRotationOdometry += 360;
+        if (RobotRotation < 0){
+            RobotRotation += 360;
         }
 
-        double robotXpositionRoundOdometry = (Math.round (100*RobotXPositionOdometry));
-        double robotYpositionRoundOdometry = (Math.round (100*RobotYPositionOdometry));
-        double robotRotationRoundOdometry = (Math.round (100*RobotRotationOdometry));
+        double robotXpositionRound = (Math.round (100*RobotXPosition));
+        double robotYpositionRound = (Math.round (100*RobotYPosition));
+        double robotRotationRound = (Math.round (100*RobotRotation));
 
-        telemetry.addData("X", (robotXpositionRoundOdometry / 100));
-        telemetry.addData("Y", (robotYpositionRoundOdometry / 100));
-        telemetry.addData("θ", (robotRotationRoundOdometry / 100));
+        telemetry.addData("X", (robotXpositionRound / 100));
+        telemetry.addData("Y", (robotYpositionRound / 100));
+        telemetry.addData("θ", (robotRotationRound / 100));
 
         telemetry.addData("Vertical Left Encoder", verticalLeft.getCurrentPosition());
         telemetry.addData("Vertical Right Encoder", verticalRight.getCurrentPosition());
@@ -412,10 +409,10 @@ public class ScoreRingsInLowGoal extends OpMode{
     //GoToPosition ---------------------------------------------------------------------------------
 
     private void goToPosition(double x, double y, double maxMovementSpeed, double maxTurnSpeed, double preferredAngle) {
-        distanceToTarget = Math.hypot(x-RobotXPositionOdometry, y-RobotYPositionOdometry);
-        double absoluteAngleToTarget = Math.atan2(y-RobotYPositionOdometry, x-RobotXPositionOdometry);
+        distanceToTarget = Math.hypot(x-RobotXPosition, y-RobotYPosition);
+        double absoluteAngleToTarget = Math.atan2(y-RobotYPosition, x-RobotXPosition);
         double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget
-                - Math.toRadians(RobotRotationOdometry) + Math.toRadians(90));
+                - Math.toRadians(RobotRotation) + Math.toRadians(90));
 
         double relativeXToPoint = 2 * Math.sin(relativeAngleToPoint);
         double relativeYToPoint = Math.cos(relativeAngleToPoint);
@@ -427,7 +424,7 @@ public class ScoreRingsInLowGoal extends OpMode{
                 / (DECELERATION_START_POINT - DECELERATION_ZERO_POINT)), 0, 1);
         double xDecelLimiter = Range.clip(yDecelLimiter * X_SPEED_MULTIPLIER, 0, 1);
 
-        double relativeTurnAngle = AngleWrap(Math.toRadians(preferredAngle)-Math.toRadians(RobotRotationOdometry));
+        double relativeTurnAngle = AngleWrap(Math.toRadians(preferredAngle)-Math.toRadians(RobotRotation));
         double turnDecelLimiter = Range.clip((Math.abs(Math.toDegrees(relativeTurnAngle)) - TURNING_DECELERATION_ZERO_POINT)
                 / (TURNING_DECELERATION_START_POINT - TURNING_DECELERATION_ZERO_POINT), 0, 1);
 
@@ -439,7 +436,7 @@ public class ScoreRingsInLowGoal extends OpMode{
         } else {
             //movement_turn = Range.clip(Range.clip(relativeTurnAngle / Math.toRadians(30),
             //        -1, 1) * maxTurnSpeed, -turnDecelLimiter, turnDecelLimiter);
-            movement_turn = -Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
+            movement_turn = Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
         }
         telemetry.addData("relativeTurnAngle", relativeTurnAngle);
         telemetry.addData("turnDecelLimiter", turnDecelLimiter);

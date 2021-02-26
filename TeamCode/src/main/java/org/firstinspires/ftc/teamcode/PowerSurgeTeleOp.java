@@ -45,12 +45,8 @@ public class PowerSurgeTeleOp extends OpMode {
     String horizontalEncoderName = "BackRight";
 
     private double RobotXPosition;
-    private double RobotXPositionOdometry;
     private double RobotYPosition;
-    private double RobotYPositionOdometry;
     private double RobotRotation;
-    private double RobotRotationOdometry;
-    //private double RobotRotation2;
 
     private double StartingXPosition;
     private double StartingYPosition;
@@ -190,7 +186,7 @@ public class PowerSurgeTeleOp extends OpMode {
         driveToLaunchButton = gamepad1.right_bumper;
 
         if(driveToLaunchButton) {
-            goToPositionOdometry(0, 0, 1, 1, 0);
+            goToPosition(0, 0, 1, 1, 0);
         }
         else if(slowDriveSpeed) {
             movement_y = .5 * DeadModifier(-gamepad1.left_stick_y);
@@ -331,7 +327,7 @@ public class PowerSurgeTeleOp extends OpMode {
     }
 
     private void startOdometry() {
-        globalPositionUpdate = new OdometryGlobalCoordinatePosition(verticalLeft, verticalRight, horizontal, COUNTS_PER_INCH, 25, imu);
+        globalPositionUpdate = new OdometryGlobalCoordinatePosition(verticalLeft, verticalRight, horizontal, COUNTS_PER_INCH, 25);
         positionThread = new Thread(globalPositionUpdate);
         positionThread.start();
 
@@ -340,39 +336,20 @@ public class PowerSurgeTeleOp extends OpMode {
 
     private void checkOdometry() {
         RobotXPosition = (globalPositionUpdate.returnXCoordinate() / COUNTS_PER_INCH) + StartingXPosition;
-        RobotXPositionOdometry = (globalPositionUpdate.returnXCoordinateOdometry() / COUNTS_PER_INCH) + StartingXPosition;
         RobotYPosition = (globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH) + StartingYPosition;
-        RobotYPositionOdometry = -(globalPositionUpdate.returnYCoordinateOdometry() / COUNTS_PER_INCH) + StartingYPosition;
         RobotRotation = (globalPositionUpdate.returnOrientation()) + StartingRotation;
-        RobotRotationOdometry = (globalPositionUpdate.returnOrientationOdometry()) + StartingRotation;
-        //RobotRotation2 = (globalPositionUpdate.returnOrientation2()) + StartingRotation;
 
         if (RobotRotation < 0){
             RobotRotation += 360;
         }
 
-        if (RobotRotationOdometry < 0){
-            RobotRotationOdometry += 360;
-        }
-
-        /*if (RobotRotation2 < 0){
-            RobotRotation2 += 360;
-        }*/
-
         double robotXpositionRound = (Math.round (100*RobotXPosition));
-        double robotXpositionOdometryRound = (Math.round (100*RobotXPositionOdometry));
         double robotYpositionRound = (Math.round (100*RobotYPosition));
-        double robotYpositionOdometryRound = (Math.round (100*RobotYPositionOdometry));
         double robotRotationRound = (Math.round (100*RobotRotation));
-        double robotRotationOdometryRound = (Math.round (100*RobotRotationOdometry));
 
         telemetry.addData("X", (robotXpositionRound / 100));
         telemetry.addData("Y", (robotYpositionRound / 100));
         telemetry.addData("θ", (robotRotationRound / 100));
-
-        telemetry.addData("X Odometry", (robotXpositionOdometryRound / 100));
-        telemetry.addData("Y Odometry", (robotYpositionOdometryRound / 100));
-        telemetry.addData("θ Odometry", (robotRotationOdometryRound / 100));
 
         telemetry.addData("Vertical Left Encoder", verticalLeft.getCurrentPosition());
         telemetry.addData("Vertical Right Encoder", verticalRight.getCurrentPosition());
@@ -426,49 +403,6 @@ public class PowerSurgeTeleOp extends OpMode {
         applyMovement();
     }
 
-    private void goToPositionOdometry(double x, double y, double maxMovementSpeed, double maxTurnSpeed, double preferredAngle) {
-        distanceToTarget = Math.hypot(x-RobotXPositionOdometry, y-RobotYPositionOdometry);
-        double absoluteAngleToTarget = Math.atan2(y-RobotYPositionOdometry, x-RobotXPositionOdometry);
-        double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget
-                - Math.toRadians(RobotRotationOdometry) + Math.toRadians(90));
-
-        double relativeXToPoint = 2 * Math.sin(relativeAngleToPoint);
-        double relativeYToPoint = Math.cos(relativeAngleToPoint);
-
-        double movementXPower = relativeXToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
-        double movementYPower = relativeYToPoint / (Math.abs(relativeXToPoint) + Math.abs(relativeYToPoint));
-
-        double yDecelLimiter = Range.clip(Math.abs((distanceToTarget - DECELERATION_ZERO_POINT)
-                / (DECELERATION_START_POINT - DECELERATION_ZERO_POINT)), 0, 1);
-        double xDecelLimiter = Range.clip(yDecelLimiter * X_SPEED_MULTIPLIER, 0, 1);
-
-        double relativeTurnAngle = AngleWrap(Math.toRadians(preferredAngle)-Math.toRadians(RobotRotationOdometry));
-        double turnDecelLimiter = Range.clip((Math.abs(Math.toDegrees(relativeTurnAngle)) - TURNING_DECELERATION_ZERO_POINT)
-                / (TURNING_DECELERATION_START_POINT - TURNING_DECELERATION_ZERO_POINT), 0, 1);
-
-        movement_x = movementXPower * Range.clip(maxMovementSpeed, -xDecelLimiter, xDecelLimiter);
-        movement_y = movementYPower * Range.clip(maxMovementSpeed, -yDecelLimiter, yDecelLimiter);
-
-        if (distanceToTarget < 1) {
-            movement_turn = 0;
-        } else {
-            //movement_turn = Range.clip(Range.clip(relativeTurnAngle / Math.toRadians(30),
-            //        -1, 1) * maxTurnSpeed, -turnDecelLimiter, turnDecelLimiter);
-            movement_turn = -Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
-        }
-        telemetry.addData("relativeTurnAngle", relativeTurnAngle);
-        telemetry.addData("turnDecelLimiter", turnDecelLimiter);
-        telemetry.addData("relativeXToPoint", relativeXToPoint);
-        telemetry.addData("relativeYToPoint", relativeYToPoint);
-        telemetry.addData("X Movement", movement_x);
-        telemetry.addData("Y Movement", movement_y);
-        telemetry.addData("Turn Movement", movement_turn);
-
-        lastDistanceToTarget = distanceToTarget;
-
-        applyMovement();
-    }
-
     private static double AngleWrap(double angle){
 
         while(angle < -Math.PI){
@@ -495,22 +429,7 @@ public class PowerSurgeTeleOp extends OpMode {
         imu = hardwareMap.get(BNO055IMU.class, "imu");
         imu.initialize(parameters);
 
-
-
-        /*BNO055IMU.Parameters parameters2 = new BNO055IMU.Parameters();
-        parameters2.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
-        parameters2.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
-        parameters2.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
-        parameters2.loggingEnabled      = true;
-        parameters2.loggingTag          = "IMU2";
-        parameters2.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
-
-        imu2 = hardwareMap.get(BNO055IMU.class, "imu2");
-        imu2.initialize(parameters2);*/
-
-        // Set up our telemetry dashboard
         composeTelemetry();
-        //composeTelemetry2();
     }
 
     private void startIMU() {
@@ -549,39 +468,6 @@ public class PowerSurgeTeleOp extends OpMode {
                 .addData("pitch", formatAngle(angles.angleUnit, angles.thirdAngle))*/;
         }
     }
-
-    /*void composeTelemetry2() {
-
-        // At the beginning of each telemetry update, grab a bunch of data
-        // from the IMU that we will then display in separate lines.
-        telemetry.addAction(new Runnable() { @Override public void run()
-        {
-            // Acquiring the angles is relatively expensive; we don't want
-            // to do that in each of the three items that need that info, as that's
-            // three times the necessary expense.
-            angles2   = imu2.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-        }
-        });
-
-        if(angles2 != null) {
-
-            telemetry.addLine()
-                    .addData("heading2", new Func<Object>() {
-                        @Override
-                        public Object value() {
-                            double normalizedAngle = angles2.firstAngle;
-
-                            if (normalizedAngle < 0) {
-                                normalizedAngle += 360;
-                            }
-                            return normalizedAngle; // formatAngle(angles.angleUnit, );
-                        }
-                    })
-                //.addData("roll", formatAngle(angles.angleUnit, angles.secondAngle))
-                //.addData("pitch", formatAngle(angles.angleUnit, angles.thirdAngle))
-                ;
-        }
-    }*/
 
     String formatAngle(AngleUnit angleUnit, double angle) {
         return formatDegrees(AngleUnit.DEGREES.fromUnit(angleUnit, angle));
@@ -664,7 +550,7 @@ public class PowerSurgeTeleOp extends OpMode {
 
         if (shooterOn) {
             if (shooterIsFast) {
-                ShooterMotor.setPower(.8);
+                ShooterMotor.setPower(.7); // was .8 before adding mass  //.6 for power shots
             }
             else {
                 ShooterMotor.setPower(.25);
