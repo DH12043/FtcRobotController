@@ -178,15 +178,15 @@ public class ScoreRingsInLowGoal extends OpMode{
 
         checkOdometry();
 
-        goToPositionByTime(-5, 108, .3, .3,5,7, INIT_STATE, DRIVE_BACKWARDS);
-        goToPositionByTime(0, 100, .3, .3,0,2, DRIVE_BACKWARDS, DRIVE_TO_STRAFE);
-        goToPositionByTime(18, 100, .5, .3,0,2, DRIVE_TO_STRAFE, DRIVE_TO_TURN);
-        goToPositionByTime(18, 100, .25, .5,180,5, DRIVE_TO_TURN, ROTATE_ROBOT);
-        goToPositionByTime(18, 118, .25, .3,180,3, ROTATE_ROBOT, DRIVE_TO_LOW_GOAL);
+        goToPositionByTime(-5, 108, .3, .3,95,7, INIT_STATE, DRIVE_BACKWARDS);
+        goToPositionByTime(0, 100, .3, .3,90,2, DRIVE_BACKWARDS, DRIVE_TO_STRAFE);
+        goToPositionByTime(18, 100, .5, .3,90,2, DRIVE_TO_STRAFE, DRIVE_TO_TURN);
+        goToPositionByTime(18, 100, .25, .5,270,5, DRIVE_TO_TURN, ROTATE_ROBOT);
+        goToPositionByTime(18, 118, .25, .3,270,3, ROTATE_ROBOT, DRIVE_TO_LOW_GOAL);
         dumpRings(DRIVE_TO_LOW_GOAL, DUMP_RINGS, 1);
-        goToPositionByTime(18, 115, .25, .3,180,1, DUMP_RINGS, DRIVE_FROM_GOAL);
+        goToPositionByTime(18, 115, .25, .3,270,1, DUMP_RINGS, DRIVE_FROM_GOAL);
         raiseRings(DRIVE_FROM_GOAL, RAISE_RINGS,1);
-        goToPositionByTime(18, 72, .25, .3,180,4, RAISE_RINGS, DRIVE_TO_LINE);
+        goToPositionByTime(18, 72, .25, .3,270,4, RAISE_RINGS, DRIVE_TO_LINE);
 
         telemetry.addData("Current State", autoState);
         telemetry.update();
@@ -314,10 +314,10 @@ public class ScoreRingsInLowGoal extends OpMode{
         }
         lastUpdateTime = currTime;
 
-        double fl_power_raw = movement_y+movement_turn+movement_x;
-        double bl_power_raw = movement_y+movement_turn-movement_x;
-        double br_power_raw = -movement_y+movement_turn-movement_x;
-        double fr_power_raw = -movement_y+movement_turn+movement_x;
+        double fl_power_raw = -movement_y+movement_turn+movement_x;
+        double bl_power_raw = -movement_y+movement_turn-movement_x;
+        double br_power_raw = movement_y+movement_turn-movement_x;
+        double fr_power_raw = movement_y+movement_turn+movement_x;
 
         //find the maximum of the powers
         double maxRawPower = Math.abs(fl_power_raw);
@@ -337,10 +337,10 @@ public class ScoreRingsInLowGoal extends OpMode{
         fr_power_raw *= scaleDownAmount;
 
         //now we can set the powers ONLY IF THEY HAVE CHANGED TO AVOID SPAMMING USB COMMUNICATIONS
-        FrontLeft.setPower(fl_power_raw);
+        FrontLeft.setPower(-fl_power_raw);
         BackLeft.setPower(-bl_power_raw);
-        BackRight.setPower(br_power_raw);
-        FrontRight.setPower(fr_power_raw);
+        BackRight.setPower(-br_power_raw);
+        FrontRight.setPower(-fr_power_raw);
     }
 
     //ODOMETRY -------------------------------------------------------------------------------------
@@ -356,10 +356,11 @@ public class ScoreRingsInLowGoal extends OpMode{
 
         //These values also affect the drive motors so we also reversed FrontRight
         verticalLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        verticalRight.setDirection(DcMotorSimple.Direction.REVERSE);
         horizontal.setDirection(DcMotorSimple.Direction.REVERSE);
 
         FrontRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        FrontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        BackLeft.setDirection(DcMotorSimple.Direction.REVERSE);
 
         verticalRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         verticalLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -370,7 +371,7 @@ public class ScoreRingsInLowGoal extends OpMode{
         //StartingRotation = Double.parseDouble(ReadWriteFile.readFile(startingθpositionFile).trim());
         StartingXPosition = 0;
         StartingYPosition = 0;
-        StartingRotation = 0;
+        StartingRotation = 90;
 
     }
 
@@ -411,8 +412,10 @@ public class ScoreRingsInLowGoal extends OpMode{
     private void goToPosition(double x, double y, double maxMovementSpeed, double maxTurnSpeed, double preferredAngle) {
         distanceToTarget = Math.hypot(x-RobotXPosition, y-RobotYPosition);
         double absoluteAngleToTarget = Math.atan2(y-RobotYPosition, x-RobotXPosition);
-        double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget
-                - Math.toRadians(RobotRotation) + Math.toRadians(90));
+
+        //double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget - Math.toRadians(RobotRotation)
+        //+ Math.toRadians(90));
+        double relativeAngleToPoint = AngleWrap(absoluteAngleToTarget - Math.toRadians(RobotRotation));
 
         double relativeXToPoint = 2 * Math.sin(relativeAngleToPoint);
         double relativeYToPoint = Math.cos(relativeAngleToPoint);

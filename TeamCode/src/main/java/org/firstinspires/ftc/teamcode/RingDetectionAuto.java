@@ -189,7 +189,6 @@ public class RingDetectionAuto extends OpMode{
         currentTime = getRuntime();
 
         checkOdometry();
-        //goToPositionByTime(0, 0, .3, .3, 90, 20, INIT_STATE, STARTING_DRIVE);
         goToPositionByTime(16, 1, .3, .3, 90, 3, INIT_STATE, STARTING_DRIVE);
         goToPositionByTime(16, 58, .3, .3, 90, 4, STARTING_DRIVE, SECOND_DRIVE);
         shootOneRing(SECOND_DRIVE, SHOOT_RINGS,1);
@@ -384,10 +383,8 @@ public class RingDetectionAuto extends OpMode{
         //These values also affect the drive motors so we also reversed FrontRight
         verticalLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         horizontal.setDirection(DcMotorSimple.Direction.REVERSE);
-//        verticalRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
         FrontRight.setDirection(DcMotorSimple.Direction.REVERSE);
-//        BackRight.setDirection(DcMotorSimple.Direction.REVERSE);
         FrontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         BackLeft.setDirection(DcMotorSimple.Direction.REVERSE);
 
@@ -439,11 +436,9 @@ public class RingDetectionAuto extends OpMode{
     //GoToPosition ---------------------------------------------------------------------------------
 
     private void goToPosition(double x, double y, double maxMovementSpeed, double maxTurnSpeed, double preferredAngle) {
-
-//        goToPositionByTime(-10, 116, .3, .3, 270, 4, DRIVE_TO_TURN, RELEASE_WOBBLE);
-
         distanceToTarget = Math.hypot(x-RobotXPosition, y-RobotYPosition);
         double absoluteAngleToTarget = Math.atan2(y-RobotYPosition, x-RobotXPosition);
+
 //        double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget - Math.toRadians(RobotRotation)
 //                + Math.toRadians(90));
         double relativeAngleToPoint = AngleWrap(absoluteAngleToTarget - Math.toRadians(RobotRotation));
