@@ -194,28 +194,28 @@ public class RingDetectionAuto extends OpMode{
         shootOneRing(SECOND_DRIVE, SHOOT_RINGS,1);
 
         if (path == 0){
-            goToPositionByTime(16, 66, .3, .3, 90, 4, SHOOT_RINGS, DRIVE_TO_TURN);
-            goToPositionByTime(-10, 68, .3, .3, 0, 4, DRIVE_TO_TURN, RELEASE_WOBBLE);
+            goToPositionByTime(16, 66, .3, .3, 90, 2, SHOOT_RINGS, DRIVE_TO_TURN);
+            goToPositionByTime(-10, 68, .3, .5, 0, 3, DRIVE_TO_TURN, RELEASE_WOBBLE);
             dropWobbleGoal(RELEASE_WOBBLE, DRIVE_AWAY_FROM_WOBBLE, 1);
-            goToPositionByTime(-4, 68, .3, .3, 0, 4, DRIVE_AWAY_FROM_WOBBLE, DRIVE_BACKWARDS);
-            raiseRings(DRIVE_BACKWARDS,DRIVE_TO_LINE,1);
-            goToPositionByTime(-4, 72, .3, .3, 0, 4, DRIVE_TO_LINE, PARK_ON_LINE);
+            goToPositionByTime(-4, 68, .3, .3, 0, 3, DRIVE_AWAY_FROM_WOBBLE, DRIVE_BACKWARDS);
+            raiseRings(DRIVE_BACKWARDS,DRIVE_TO_LINE,.5);
+            goToPositionByTime(-4, 72, .3, .3, 0, 10, DRIVE_TO_LINE, PARK_ON_LINE);
         }
         else if (path == 1) {
-            goToPositionByTime(16, 90, .3, .3, 90, 4, SHOOT_RINGS, DRIVE_TO_TURN);
-            goToPositionByTime(14, 92, .3, .3, 0, 4, DRIVE_TO_TURN, RELEASE_WOBBLE);
+            goToPositionByTime(16, 94, .3, .3, 90, 2, SHOOT_RINGS, DRIVE_TO_TURN);
+            goToPositionByTime(16, 94, .3, .5, 0, 2, DRIVE_TO_TURN, RELEASE_WOBBLE);
             dropWobbleGoal(RELEASE_WOBBLE, DRIVE_AWAY_FROM_WOBBLE, 1);
-            goToPositionByTime(20, 92, .3, .3, 0, 4, DRIVE_AWAY_FROM_WOBBLE, DRIVE_BACKWARDS);
-            raiseRings(DRIVE_BACKWARDS,DRIVE_TO_LINE,1);
-            goToPositionByTime(20, 72, .3, .3, 0, 4, DRIVE_TO_LINE, PARK_ON_LINE);
+            goToPositionByTime(20, 92, .3, .3, 0, 2, DRIVE_AWAY_FROM_WOBBLE, DRIVE_BACKWARDS);
+            raiseRings(DRIVE_BACKWARDS,DRIVE_TO_LINE,.5);
+            goToPositionByTime(20, 72, .3, .3, 0, 10, DRIVE_TO_LINE, PARK_ON_LINE);
         }
         else if (path == 4) {
-            goToPositionByTime(16, 114, .3, .3, 90, 4, SHOOT_RINGS, DRIVE_TO_TURN);
-            goToPositionByTime(-10, 116, .3, .3, 0, 4, DRIVE_TO_TURN, RELEASE_WOBBLE);
+            goToPositionByTime(0, 113, .5, .3, 90, 2, SHOOT_RINGS, DRIVE_TO_TURN);
+            goToPositionByTime(-10, 116, .3, .3, 0, 2.5, DRIVE_TO_TURN, RELEASE_WOBBLE);
             dropWobbleGoal(RELEASE_WOBBLE, DRIVE_AWAY_FROM_WOBBLE, 1);
-            goToPositionByTime(-4, 116, .3, .3, 0, 4, DRIVE_AWAY_FROM_WOBBLE, DRIVE_BACKWARDS);
-            raiseRings(DRIVE_BACKWARDS,DRIVE_TO_LINE,1);
-            goToPositionByTime(-4, 72, .3, .3, 0, 4, DRIVE_TO_LINE, PARK_ON_LINE);
+            goToPositionByTime(-4, 116, .3, .3, 0, 2, DRIVE_AWAY_FROM_WOBBLE, DRIVE_BACKWARDS);
+            raiseRings(DRIVE_BACKWARDS,DRIVE_TO_LINE,.5);
+            goToPositionByTime(-4, 72, .3, .3, 0, 10, DRIVE_TO_LINE, PARK_ON_LINE);
 
         }
         telemetry.addData("Path", path);
@@ -469,7 +469,7 @@ public class RingDetectionAuto extends OpMode{
         movement_x = movementXPower * Range.clip(maxMovementSpeed, -xDecelLimiter, xDecelLimiter);
         movement_y = movementYPower * Range.clip(maxMovementSpeed, -yDecelLimiter, yDecelLimiter);
 
-        if (distanceToTarget < 1) {
+        if (distanceToTarget < 1 && Math.abs(relativeAngleToPoint) < 5) {
             movement_turn = 0;
         }
         else {

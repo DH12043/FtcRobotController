@@ -34,9 +34,7 @@ public class PowerSurgeTeleOp extends OpMode {
     public static final double DEADZONE = 0.15;
 
     BNO055IMU imu;
-    //BNO055IMU imu2;
     Orientation angles;
-    //Orientation angles2;
 
     DcMotor verticalRight, verticalLeft, horizontal;
 
@@ -91,6 +89,8 @@ public class PowerSurgeTeleOp extends OpMode {
     private boolean shooterOn = false;
     private boolean shooterIsFast = true;
     private boolean shooterFeedingOn = false;
+    private boolean bucketUp = false;
+    private boolean firstPressTransferToggleButton = false;
 
     private double shooterTicksPerRevolution = 103.6;
 
@@ -116,9 +116,9 @@ public class PowerSurgeTeleOp extends OpMode {
     private double movement_turn;
 
     private boolean shooterToggleButton;
-    private boolean shooterFeedingToggleButton;
+    private boolean shooterFeedingServoButton;
     private boolean shooterSpeedToggleButton;
-    private double whileHoldingFeedShooterButton;
+    private boolean transferToggleButton;
     private boolean intakeToggleButton;
     private boolean driveToLaunchButton;
     private boolean wobbleButton;
@@ -134,13 +134,13 @@ public class PowerSurgeTeleOp extends OpMode {
 
     private DcMotor IntakeMotor;
     private DcMotor ShooterMotor;
-    private DcMotor ShooterFeedingMotor;
+    private DcMotor TransferMotor;
 
     private DcMotor WobbleMotor;
 
     private Servo ShooterFeedingServo;
 
-    private CRServo TransferServo;
+
 
     //LPS COUNTER ----------------------------------------------------------------------------------
 
@@ -161,7 +161,6 @@ public class PowerSurgeTeleOp extends OpMode {
         initializeDriveTrain();
         initializeOdometry();
         initializeIMU();
-        initializeDistanceSensors();
         initializeShooter();
         initializeIntake();
         initializeWobble();
@@ -200,33 +199,18 @@ public class PowerSurgeTeleOp extends OpMode {
         }
 
         shooterToggleButton = gamepad1.a;
-        shooterFeedingToggleButton = gamepad1.x;
-        intakeToggleButton = gamepad1.b;
+        shooterFeedingServoButton = gamepad1.x;
+        transferToggleButton = gamepad1.b;
         wobbleButton = gamepad1.dpad_up;
         shooterSpeedToggleButton = gamepad1.y;
-        whileHoldingFeedShooterButton = gamepad1.right_trigger;
         wobbleOffsetUp = gamepad1.left_bumper;
         wobbleOffsetDown = gamepad1.left_trigger;
 
-        double currentTimeAtApplyMovement = getRuntime();
         applyMovement();
-        double currentTimeAtCheckOdometry = getRuntime();
         checkOdometry();
-        double currentTimeAtDistanceSensors = getRuntime();
-        //checkDistanceSensors();
-        double currentTimeAtRunShooter = getRuntime();
         runShooter();
-        double currentTimeAtRunIntake = getRuntime();
-        runIntake();
-        double currentTimeAfterRunIntake = getRuntime();
+        //runIntake();
         runWobble();
-
-        telemetry.addData("LPS and drivetrain", "%.1f", (currentTimeAtApplyMovement-currentTimeAtCheckLPS) * 1000);
-        telemetry.addData("Apply Movement", "%.1f", (currentTimeAtCheckOdometry-currentTimeAtApplyMovement) * 1000);
-        telemetry.addData("Check Odometry", "%.1f", (currentTimeAtDistanceSensors-currentTimeAtCheckOdometry) * 1000);
-        telemetry.addData("Check Distance Sensors", "%.1f", (currentTimeAtRunShooter-currentTimeAtDistanceSensors) * 1000);
-        telemetry.addData("Run Shooter", "%.1f", (currentTimeAtRunIntake-currentTimeAtRunShooter) * 1000);
-        telemetry.addData("Run Intake", "%.1f", (currentTimeAfterRunIntake-currentTimeAtRunIntake) * 1000);
 
         telemetry.update();
     }
@@ -477,27 +461,6 @@ public class PowerSurgeTeleOp extends OpMode {
         return String.format(Locale.getDefault(), "%.1f", AngleUnit.DEGREES.normalize(degrees));
     }
 
-    //WALL DISTANCE SENSORS
-
-    private void initializeDistanceSensors() {
-        LeftDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor .class, "LeftDistanceSensor");
-        BackDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor .class, "BackDistanceSensor");
-        RightDistanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor .class, "RightDistanceSensor");
-    }
-
-    private void checkDistanceSensors() {
-        if (loopCount % 10 != 0)
-            return;
-
-        leftDistance = LeftDistanceSensor.getDistance(DistanceUnit.INCH);
-        backDistance = BackDistanceSensor.getDistance(DistanceUnit.INCH);
-        rightDistance = RightDistanceSensor.getDistance(DistanceUnit.INCH);
-
-        telemetry.addData("LeftDistance", leftDistance);
-        telemetry.addData("BackDistance", backDistance);
-        telemetry.addData("RightDistance", rightDistance);
-    }
-
 
     //SHOOTER --------------------------------------------------------------------------------------
 
@@ -506,15 +469,15 @@ public class PowerSurgeTeleOp extends OpMode {
         ShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         ShooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        TransferServo = hardwareMap.crservo.get("TransferServo");
-
         ShooterFeedingServo = hardwareMap.servo.get("ShooterFeedingServo");
+        ShooterFeedingServo.setPosition(.6);
 
-        ShooterFeedingServo.setPosition(0);
-
-        ShooterFeedingMotor = hardwareMap.dcMotor.get("ShooterFeedingMotor");
-        ShooterFeedingMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        ShooterFeedingMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        TransferMotor = hardwareMap.dcMotor.get("TransferMotor");
+        TransferMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        TransferMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        TransferMotor.setTargetPosition(0);
+        TransferMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        TransferMotor.setPower(.2);
     }
 
     private void runShooter() {
@@ -560,6 +523,33 @@ public class PowerSurgeTeleOp extends OpMode {
             ShooterMotor.setPower(0);
         }
 
+        if (transferToggleButton) {
+            if (firstPressTransferToggleButton) {
+                bucketUp = !bucketUp;
+                firstPressTransferToggleButton = false;
+            }
+        }
+        else {
+            firstPressTransferToggleButton = true;
+        }
+
+        if (bucketUp) {
+            if (shooterFeedingServoButton) {
+                ShooterFeedingServo.setPosition(.2);
+            }
+            else{
+                ShooterFeedingServo.setPosition(.6);
+            }
+            TransferMotor.setTargetPosition(-140);
+            IntakeMotor.setPower(0);
+
+        }
+        else {
+            ShooterFeedingServo.setPosition(.6);
+            TransferMotor.setTargetPosition(0);
+            IntakeMotor.setPower(-.5);
+        }
+
         currentShooterTickCount = ShooterMotor.getCurrentPosition();
 
         double shooterRevolutionsPerLoop = ((currentShooterTickCount - previousShooterTickCount) / shooterTicksPerRevolution);
@@ -568,45 +558,6 @@ public class PowerSurgeTeleOp extends OpMode {
         telemetry.addData("shooterRevolutionsPerMinute", shooterRevolutionsPerMinute);
 
         previousShooterTickCount = currentShooterTickCount;
-
-        if (whileHoldingFeedShooterButton > .5) {
-            ShooterFeedingMotor.setPower(-1);
-        }
-        else {
-            if (shooterFeedingToggleButton) {
-                if (firstPressShooterFeedingToggleButton) {
-                    if (shooterFeedingOn) {
-                        shooterFeedingOn = false;
-                    } else {
-                        shooterFeedingOn = true;
-                        startShooterFeedingTime = currentTime;
-                    }
-                    firstPressShooterFeedingToggleButton = false;
-                }
-            } else {
-                firstPressShooterFeedingToggleButton = true;
-            }
-
-            if(shooterFeedingOn) {
-                ShooterFeedingMotor.setPower(-1);
-                TransferServo.setPower(1);
-                if ((currentTime - startShooterFeedingTime) < 1) {
-                    ShooterFeedingServo.setPosition(1/6);
-                }
-                else if ((currentTime - startShooterFeedingTime) < 2) {
-                    ShooterFeedingServo.setPosition(0);
-                }
-                else {
-                    startShooterFeedingTime = currentTime;
-                    ShooterFeedingServo.setPosition(1/6);
-                }
-            }
-            else{
-                ShooterFeedingMotor.setPower(0);
-                TransferServo.setPower(0);
-                ShooterFeedingServo.setPosition(0);
-            }
-        }
 
     }
 

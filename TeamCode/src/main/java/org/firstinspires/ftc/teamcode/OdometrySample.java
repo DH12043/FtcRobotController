@@ -33,8 +33,8 @@ public class OdometrySample extends LinearOpMode {
 
     //Hardware map names for the encoder wheels. Again, these will change for each robot and need to be updated below
     String verticalLeftEncoderName = "FrontLeft";
-    String verticalRightEncoderName = "BackRight";
-    String horizontalEncoderName = "FrontRight";
+    String verticalRightEncoderName = "FrontRight";
+    String horizontalEncoderName = "BackRight";
 
     @Override
     public void runOpMode() {
@@ -88,7 +88,7 @@ public class OdometrySample extends LinearOpMode {
         while(opModeIsActive()){
             //Display Global (x, y, theta) coordinates
             telemetry.addData("X Position", globalPositionUpdate.returnXCoordinate() / COUNTS_PER_INCH);
-            telemetry.addData("Y Position", globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH);
+            telemetry.addData("Y Position", -globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH);
             telemetry.addData("Orientation (Degrees)", globalPositionUpdate.returnOrientation());
 
             telemetry.addData("Vertical Left Encoder", verticalLeft.getCurrentPosition());

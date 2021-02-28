@@ -32,8 +32,8 @@ import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 //B: (2,5 on dice) Middle - 1 rings
 //C: (3,6 on dice) Far - 4 rings
 
-@Autonomous(name = "ScoreRingsInLowGoal")
-public class ScoreRingsInLowGoal extends OpMode{
+@Autonomous(name = "DoubleWobbleAutoBlue")
+public class DoubleWobbleAutoBlue extends OpMode{
 
     private int path;
 
@@ -105,15 +105,29 @@ public class ScoreRingsInLowGoal extends OpMode{
     private int lastAutoState = NO_STATE;
     private static final int NO_STATE = -1;
     private static final int INIT_STATE = 0;
-    private static final int DRIVE_BACKWARDS = 2;
-    private static final int DRIVE_TO_STRAFE = 5;
+    private static final int STARTING_DRIVE = 1;
+    private static final int STARTING_TURN = 2;
+    private static final int SECOND_DRIVE = 3;
+    private static final int SECOND_TURN = 4;
+    private static final int DRIVE_BACKWARDS = 5;
+    private static final int DRIVE_TO_STRAFE = 6;
+    private static final int SHOOT_RINGS = 8;
+    private static final int DRIVE_TO_SHOOT = 9;
     private static final int DRIVE_TO_TURN = 10;
     private static final int ROTATE_ROBOT = 20;
+    private static final int RELEASE_WOBBLE = 25;
+    private static final int DRIVE_AWAY_FROM_WOBBLE = 27;
     private static final int DRIVE_TO_LOW_GOAL = 30;
     private static final int DUMP_RINGS = 40;
     private static final int DRIVE_FROM_GOAL = 43;
     private static final int RAISE_RINGS = 46;
     private static final int DRIVE_TO_LINE = 50;
+    private static final int PARK_ON_LINE = 60;
+    private static final int DRIVE_TO_START_WALL = 70;
+    private static final int DRIVE_TO_SECOND_WOBBLE = 80;
+    private static final int DRIVE_FORWARD_RIGHT = 90;
+    private static final int DELIVER_SECOND_WOBBLE = 100;
+    private static final int SECOND_DRIVE_BACKWARDS = 110;
 
     private static final double DECELERATION_START_POINT = 24;
     private static final double DECELERATION_ZERO_POINT = -1;
@@ -157,12 +171,18 @@ public class ScoreRingsInLowGoal extends OpMode{
 
         telemetry.update();
     }
-    public void start() {
-        startTfod();
 
+    public void init_loop() {
+        telemetry.addData("Version Number", "2/06/21");
+        choosePath();
+    }
+
+    public void start() {
         checkBatteryVoltage();
 
         //startWobble();
+
+        ShooterMotor.setPower(.7);
 
         startIMU();
         startOdometry();
@@ -174,20 +194,45 @@ public class ScoreRingsInLowGoal extends OpMode{
     public void loop() {
         currentTime = getRuntime();
 
-        choosePath();
-
         checkOdometry();
+        goToPositionByTime(-15, 45, 1, .3, 90, 1, INIT_STATE, STARTING_DRIVE);
 
-        goToPositionByTime(-5, 108, .3, .3,95,7, INIT_STATE, DRIVE_BACKWARDS);
-        goToPositionByTime(0, 100, .3, .3,90,2, DRIVE_BACKWARDS, DRIVE_TO_STRAFE);
-        goToPositionByTime(18, 100, .5, .3,90,2, DRIVE_TO_STRAFE, DRIVE_TO_TURN);
-        goToPositionByTime(18, 100, .25, .5,270,5, DRIVE_TO_TURN, ROTATE_ROBOT);
-        goToPositionByTime(18, 118, .25, .3,270,3, ROTATE_ROBOT, DRIVE_TO_LOW_GOAL);
-        dumpRings(DRIVE_TO_LOW_GOAL, DUMP_RINGS, 1);
-        goToPositionByTime(18, 115, .25, .3,270,1, DUMP_RINGS, DRIVE_FROM_GOAL);
-        raiseRings(DRIVE_FROM_GOAL, RAISE_RINGS,1);
-        goToPositionByTime(18, 72, .25, .3,270,4, RAISE_RINGS, DRIVE_TO_LINE);
-
+        if (path == 0){
+            goToPositionByTime(-19, 63, .5, .3, 90, 1.5, STARTING_DRIVE, DRIVE_BACKWARDS);
+            goToPositionByTime(-19, 57, .5, .3, 90, .75, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
+            goToPositionByTime(24, 57, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
+            shootOneRing(SHOOT_RINGS, DRIVE_TO_START_WALL,1);
+            goToPositionByTime(32, 0, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
+            goToPositionByTime(14, -1, .5, .3, 120, 1.5, DRIVE_TO_SECOND_WOBBLE, DELIVER_SECOND_WOBBLE);
+            goToPositionByTime(-18, 59, .4, .3, 120, 3, DELIVER_SECOND_WOBBLE, SECOND_DRIVE_BACKWARDS);
+            goToPositionByTime(-19, 55, .5, .3, 90, .75, SECOND_DRIVE_BACKWARDS, DRIVE_TO_LINE);
+            goToPositionByTime(20, 70, .75, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
+        }
+        else if (path == 1) {
+            goToPositionByTime(5, 86, .5, .3, 90, 3, STARTING_DRIVE, DRIVE_TO_SHOOT);
+            goToPositionByTime(5, 81, .5, .3, 90, .75, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
+            goToPositionByTime(24, 57, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
+            shootOneRing(SHOOT_RINGS, DRIVE_TO_START_WALL,1);
+            goToPositionByTime(32, 0, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
+            goToPositionByTime(12, -1, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
+            goToPositionByTime(20, 48, .5, .3, 90, 2, DRIVE_FORWARD_RIGHT, DELIVER_SECOND_WOBBLE);
+            goToPositionByTime(5, 86, .5, .3, 90, 3, DELIVER_SECOND_WOBBLE, SECOND_DRIVE_BACKWARDS);
+            goToPositionByTime(5, 81, .5, .3, 90, .75, SECOND_DRIVE_BACKWARDS, DRIVE_TO_LINE);
+            goToPositionByTime(24, 70, .75, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
+        }
+        else if (path == 4) {
+            goToPositionByTime(-20, 112, .5, .3, 90, 3, STARTING_DRIVE, DRIVE_TO_SHOOT);
+            goToPositionByTime(-20, 105, .5, .3, 90, .75, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
+            goToPositionByTime(24, 57, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
+            shootOneRing(SHOOT_RINGS, DRIVE_TO_START_WALL,1);
+            goToPositionByTime(32, 0, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
+            goToPositionByTime(12, -1, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
+            goToPositionByTime(20, 48, .5, .3, 90, 2, DRIVE_FORWARD_RIGHT, DELIVER_SECOND_WOBBLE);
+            goToPositionByTime(-18, 110, .5, .3, 90, 3, DELIVER_SECOND_WOBBLE, SECOND_DRIVE_BACKWARDS);
+            goToPositionByTime(-19, 105, .5, .3, 90, .75, SECOND_DRIVE_BACKWARDS, DRIVE_TO_LINE);
+            goToPositionByTime(24, 70, .75, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
+        }
+        telemetry.addData("Path", path);
         telemetry.addData("Current State", autoState);
         telemetry.update();
     }
@@ -197,9 +242,7 @@ public class ScoreRingsInLowGoal extends OpMode{
         if (globalPositionUpdate != null) {
             globalPositionUpdate.stop();
         }
-        if (tfod != null) {
-            tfod.shutdown();
-        }
+        stopTfod();
     }
 
     //Battery --------------------------------------------------------------------------------------
@@ -242,10 +285,16 @@ public class ScoreRingsInLowGoal extends OpMode{
                     if (recognition.getLabel().equals("Quad")) {
                         path = 4;
                     }
-                    if (recognition.getLabel().equals("Single")) {
+                    else if (recognition.getLabel().equals("Single")) {
                         path = 1;
                     }
+                    else {
+                        path = 0;
+                    }
 
+                }
+                if (updatedRecognitions.size() == 0) {
+                    path = 0;
                 }
             }
         }
@@ -288,7 +337,7 @@ public class ScoreRingsInLowGoal extends OpMode{
         com.vuforia.CameraDevice.getInstance().setFlashTorchMode(true);
     }
 
-    private void startTfod() {
+    private void stopTfod() {
         if (tfod != null) {
             tfod.shutdown();
         }
@@ -413,8 +462,8 @@ public class ScoreRingsInLowGoal extends OpMode{
         distanceToTarget = Math.hypot(x-RobotXPosition, y-RobotYPosition);
         double absoluteAngleToTarget = Math.atan2(y-RobotYPosition, x-RobotXPosition);
 
-        //double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget - Math.toRadians(RobotRotation)
-        //+ Math.toRadians(90));
+//        double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget - Math.toRadians(RobotRotation)
+//                + Math.toRadians(90));
         double relativeAngleToPoint = AngleWrap(absoluteAngleToTarget - Math.toRadians(RobotRotation));
 
         double relativeXToPoint = 2 * Math.sin(relativeAngleToPoint);
@@ -436,9 +485,8 @@ public class ScoreRingsInLowGoal extends OpMode{
 
         if (distanceToTarget < 1 && Math.abs(relativeAngleToPoint) < 5) {
             movement_turn = 0;
-        } else {
-            //movement_turn = Range.clip(Range.clip(relativeTurnAngle / Math.toRadians(30),
-            //        -1, 1) * maxTurnSpeed, -turnDecelLimiter, turnDecelLimiter);
+        }
+        else {
             movement_turn = Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
         }
         telemetry.addData("relativeTurnAngle", relativeTurnAngle);
@@ -567,6 +615,24 @@ public class ScoreRingsInLowGoal extends OpMode{
         ShooterFeedingMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
+    private void shootOneRing(int thisState, int nextState, double timeout) {
+        if (autoState != thisState) {
+            return;
+        }
+
+        if (lastAutoState != thisState) {
+            startTime = getRuntime();
+            lastAutoState = thisState;
+        }
+
+        ShooterFeedingMotor.setPower(-1);
+
+        if (currentTime - timeout > startTime) {
+            ShooterFeedingMotor.setPower(0);
+            autoState = nextState;
+        }
+    }
+
     //WOBBLE ---------------------------------------------------------------------------------------
 
     private void initializeWobble() {
@@ -615,4 +681,22 @@ public class ScoreRingsInLowGoal extends OpMode{
         }
     }
 
+    private void dropWobbleGoal(int thisState, int nextState, double timeout) {
+        if (autoState != thisState) {
+            return;
+        }
+
+        if (lastAutoState != thisState) {
+            startTime = getRuntime();
+            lastAutoState = thisState;
+        }
+
+        WobbleMotor.setTargetPosition(685);
+
+        if (currentTime - timeout > startTime) {
+            autoState = nextState;
+        }
+    }
+
 }
+
