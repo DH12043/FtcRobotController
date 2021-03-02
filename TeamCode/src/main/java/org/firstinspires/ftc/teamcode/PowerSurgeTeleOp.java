@@ -18,7 +18,6 @@ import java.util.Locale;
 import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -91,6 +90,9 @@ public class PowerSurgeTeleOp extends OpMode {
     private boolean shooterFeedingOn = false;
     private boolean bucketUp = false;
     private boolean firstPressTransferToggleButton = false;
+
+    private double launchPosition = .25;
+    private double storePosition = .7;
 
     private double shooterTicksPerRevolution = 103.6;
 
@@ -470,14 +472,14 @@ public class PowerSurgeTeleOp extends OpMode {
         ShooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         ShooterFeedingServo = hardwareMap.servo.get("ShooterFeedingServo");
-        ShooterFeedingServo.setPosition(.6);
+        ShooterFeedingServo.setPosition(storePosition);
 
         TransferMotor = hardwareMap.dcMotor.get("TransferMotor");
         TransferMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         TransferMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         TransferMotor.setTargetPosition(0);
         TransferMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        TransferMotor.setPower(.2);
+        TransferMotor.setPower(.4);
     }
 
     private void runShooter() {
@@ -513,7 +515,7 @@ public class PowerSurgeTeleOp extends OpMode {
 
         if (shooterOn) {
             if (shooterIsFast) {
-                ShooterMotor.setPower(.7); // was .8 before adding mass  //.6 for power shots
+                ShooterMotor.setPower(.75); // was .8 before adding mass  //.6 for power shots
             }
             else {
                 ShooterMotor.setPower(.25);
@@ -535,17 +537,17 @@ public class PowerSurgeTeleOp extends OpMode {
 
         if (bucketUp) {
             if (shooterFeedingServoButton) {
-                ShooterFeedingServo.setPosition(.2);
+                ShooterFeedingServo.setPosition(launchPosition);
             }
             else{
-                ShooterFeedingServo.setPosition(.6);
+                ShooterFeedingServo.setPosition(storePosition);
             }
-            TransferMotor.setTargetPosition(-140);
+            TransferMotor.setTargetPosition(-165);
             IntakeMotor.setPower(0);
 
         }
         else {
-            ShooterFeedingServo.setPosition(.6);
+            ShooterFeedingServo.setPosition(storePosition);
             TransferMotor.setTargetPosition(0);
             IntakeMotor.setPower(-.5);
         }

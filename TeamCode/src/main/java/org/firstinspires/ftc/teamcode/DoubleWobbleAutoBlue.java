@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
@@ -80,9 +81,11 @@ public class DoubleWobbleAutoBlue extends OpMode{
 
     private DcMotor IntakeMotor;
     private DcMotor ShooterMotor;
-    private DcMotor ShooterFeedingMotor;
+    private DcMotor TransferMotor;
 
     private DcMotor WobbleMotor;
+
+    private Servo ShooterFeedingServo;
 
     private double movement_x;
     private double movement_y;
@@ -143,6 +146,12 @@ public class DoubleWobbleAutoBlue extends OpMode{
     private boolean shooterOn = false;
     private boolean shooterIsFast = true;
     private boolean shooterFeedingOn = false;
+    private boolean firstRunShootThreeRings = true;
+
+    private double launchPosition = .25;
+    private double storePosition = .7;
+
+    double startShootingTime = 0;
 
     private double shooterTicksPerRevolution = 103.6;
 
@@ -182,10 +191,12 @@ public class DoubleWobbleAutoBlue extends OpMode{
 
         //startWobble();
 
-        ShooterMotor.setPower(.7);
+        ShooterMotor.setPower(.75);
 
         startIMU();
         startOdometry();
+
+        startShooter();
 
         //ShooterMotor.setPower(.8);
         telemetry.addData("Status", "Odometry System has started");
@@ -198,38 +209,37 @@ public class DoubleWobbleAutoBlue extends OpMode{
         goToPositionByTime(-15, 45, 1, .3, 90, 1, INIT_STATE, STARTING_DRIVE);
 
         if (path == 0){
-            goToPositionByTime(-19, 63, .5, .3, 90, 1.5, STARTING_DRIVE, DRIVE_BACKWARDS);
-            goToPositionByTime(-19, 57, .5, .3, 90, .75, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
-            goToPositionByTime(24, 57, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
-            shootOneRing(SHOOT_RINGS, DRIVE_TO_START_WALL,1);
+            goToPositionByTime(-19, 64, .5, .3, 90, 1.5, STARTING_DRIVE, DRIVE_BACKWARDS);
+            goToPositionByTime(-19, 57, .5, .3, 90, 1, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
+            goToPositionByTime(24, 56, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
+            shootThreeRings(SHOOT_RINGS, DRIVE_TO_START_WALL,9);
             goToPositionByTime(32, 0, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
             goToPositionByTime(14, -1, .5, .3, 120, 1.5, DRIVE_TO_SECOND_WOBBLE, DELIVER_SECOND_WOBBLE);
             goToPositionByTime(-18, 59, .4, .3, 120, 3, DELIVER_SECOND_WOBBLE, SECOND_DRIVE_BACKWARDS);
-            goToPositionByTime(-19, 55, .5, .3, 90, .75, SECOND_DRIVE_BACKWARDS, DRIVE_TO_LINE);
+            goToPositionByTime(-18, 55, .5, .3, 90, 1, SECOND_DRIVE_BACKWARDS, DRIVE_TO_LINE);
             goToPositionByTime(20, 70, .75, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
         }
         else if (path == 1) {
-            goToPositionByTime(5, 86, .5, .3, 90, 3, STARTING_DRIVE, DRIVE_TO_SHOOT);
-            goToPositionByTime(5, 81, .5, .3, 90, .75, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
-            goToPositionByTime(24, 57, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
-            shootOneRing(SHOOT_RINGS, DRIVE_TO_START_WALL,1);
+            goToPositionByTime(-1, 90, .5, .3, 90, 3, STARTING_DRIVE, DRIVE_TO_SHOOT);
+            goToPositionByTime(-1, 81, .5, .3, 90, 1, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
+            goToPositionByTime(25, 56, .75, .3, 90, 4, DRIVE_TO_SHOOT, SHOOT_RINGS);
+            shootThreeRings(SHOOT_RINGS, DRIVE_TO_START_WALL,9);
             goToPositionByTime(32, 0, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
-            goToPositionByTime(12, -1, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
+            goToPositionByTime(9, -1, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
             goToPositionByTime(20, 48, .5, .3, 90, 2, DRIVE_FORWARD_RIGHT, DELIVER_SECOND_WOBBLE);
-            goToPositionByTime(5, 86, .5, .3, 90, 3, DELIVER_SECOND_WOBBLE, SECOND_DRIVE_BACKWARDS);
-            goToPositionByTime(5, 81, .5, .3, 90, .75, SECOND_DRIVE_BACKWARDS, DRIVE_TO_LINE);
-            goToPositionByTime(24, 70, .75, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
+            goToPositionByTime(1, 86, .5, .3, 90, 3, DELIVER_SECOND_WOBBLE, DRIVE_TO_LINE);
+            goToPositionByTime(1, 72, .75, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
         }
         else if (path == 4) {
             goToPositionByTime(-20, 112, .5, .3, 90, 3, STARTING_DRIVE, DRIVE_TO_SHOOT);
-            goToPositionByTime(-20, 105, .5, .3, 90, .75, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
-            goToPositionByTime(24, 57, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
-            shootOneRing(SHOOT_RINGS, DRIVE_TO_START_WALL,1);
+            goToPositionByTime(-20, 105, .5, .3, 90, 1, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
+            goToPositionByTime(24, 56, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
+            shootThreeRings(SHOOT_RINGS, DRIVE_TO_START_WALL,9);
             goToPositionByTime(32, 0, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
             goToPositionByTime(12, -1, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
             goToPositionByTime(20, 48, .5, .3, 90, 2, DRIVE_FORWARD_RIGHT, DELIVER_SECOND_WOBBLE);
             goToPositionByTime(-18, 110, .5, .3, 90, 3, DELIVER_SECOND_WOBBLE, SECOND_DRIVE_BACKWARDS);
-            goToPositionByTime(-19, 105, .5, .3, 90, .75, SECOND_DRIVE_BACKWARDS, DRIVE_TO_LINE);
+            goToPositionByTime(-19, 105, .5, .3, 90, 1, SECOND_DRIVE_BACKWARDS, DRIVE_TO_LINE);
             goToPositionByTime(24, 70, .75, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
         }
         telemetry.addData("Path", path);
@@ -610,12 +620,21 @@ public class DoubleWobbleAutoBlue extends OpMode{
         ShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         ShooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        ShooterFeedingMotor = hardwareMap.dcMotor.get("ShooterFeedingMotor");
-        ShooterFeedingMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        ShooterFeedingMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        ShooterFeedingServo = hardwareMap.servo.get("ShooterFeedingServo");
+        ShooterFeedingServo.setPosition(storePosition);
+
+        TransferMotor = hardwareMap.dcMotor.get("TransferMotor");
+        TransferMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        TransferMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        TransferMotor.setTargetPosition(0);
+        TransferMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        TransferMotor.setPower(.4);
+    }
+    private void startShooter() {
+        TransferMotor.setTargetPosition(-162);
     }
 
-    private void shootOneRing(int thisState, int nextState, double timeout) {
+    /*private void shootOneRing(int thisState, int nextState, double timeout) {
         if (autoState != thisState) {
             return;
         }
@@ -629,6 +648,61 @@ public class DoubleWobbleAutoBlue extends OpMode{
 
         if (currentTime - timeout > startTime) {
             ShooterFeedingMotor.setPower(0);
+            autoState = nextState;
+        }
+    }*/
+
+    private void shootThreeRings(int thisState, int nextState, double timeout) {
+
+        if (autoState != thisState) {
+            return;
+        }
+
+        if (lastAutoState != thisState) {
+            startTime = getRuntime();
+            lastAutoState = thisState;
+        }
+
+        if (firstRunShootThreeRings) {
+            startShootingTime = getRuntime();
+            currentTime = getRuntime();
+            firstRunShootThreeRings = false;
+        }
+
+        FrontLeft.setPower(0);
+        FrontRight.setPower(0);
+        BackLeft.setPower(0);
+        BackRight.setPower(0);
+
+        if (currentTime - startShootingTime  < 1) {
+            ShooterFeedingServo.setPosition(launchPosition);
+        }
+        else if (currentTime - startShootingTime  < 2) {
+            ShooterFeedingServo.setPosition(storePosition);
+        }
+        else if (currentTime - startShootingTime  < 3) {
+            ShooterFeedingServo.setPosition(launchPosition);
+        }
+        else if (currentTime - startShootingTime  < 4) {
+            ShooterFeedingServo.setPosition(storePosition);
+        }
+        else if (currentTime - startShootingTime  < 5) {
+            ShooterFeedingServo.setPosition(launchPosition);
+        }
+        else if (currentTime - startShootingTime  < 6) {
+            ShooterFeedingServo.setPosition(storePosition);
+        }
+        else if (currentTime - startShootingTime  < 7) {
+            ShooterFeedingServo.setPosition(launchPosition);
+        }
+        else if (currentTime - startShootingTime  < 8) {
+            ShooterFeedingServo.setPosition(storePosition);
+        }
+        else {
+            TransferMotor.setTargetPosition(0);
+        }
+
+        if (currentTime - timeout > startTime) {
             autoState = nextState;
         }
     }
