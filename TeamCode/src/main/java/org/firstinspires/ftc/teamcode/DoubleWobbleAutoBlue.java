@@ -209,38 +209,37 @@ public class DoubleWobbleAutoBlue extends OpMode{
         goToPositionByTime(-15, 45, 1, .3, 90, 1, INIT_STATE, STARTING_DRIVE);
 
         if (path == 0){
-            goToPositionByTime(-19, 64, .5, .3, 90, 1.5, STARTING_DRIVE, DRIVE_BACKWARDS);
-            goToPositionByTime(-19, 57, .5, .3, 90, 1, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
-            goToPositionByTime(24, 56, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
+            goToPositionByTime(-20, 66, .5, .3, 90, 1.75, STARTING_DRIVE, DRIVE_BACKWARDS);
+            goToPositionByTime(-20, 57, .5, .3, 90, 1, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
+            goToPositionByTime(23, 56, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
             shootThreeRings(SHOOT_RINGS, DRIVE_TO_START_WALL,9);
             goToPositionByTime(32, 0, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
-            goToPositionByTime(14, -1, .5, .3, 120, 1.5, DRIVE_TO_SECOND_WOBBLE, DELIVER_SECOND_WOBBLE);
-            goToPositionByTime(-18, 59, .4, .3, 120, 3, DELIVER_SECOND_WOBBLE, SECOND_DRIVE_BACKWARDS);
-            goToPositionByTime(-18, 55, .5, .3, 90, 1, SECOND_DRIVE_BACKWARDS, DRIVE_TO_LINE);
+            goToPositionByTime(15, -1, .5, .3, 120, 1.5, DRIVE_TO_SECOND_WOBBLE, DELIVER_SECOND_WOBBLE);
+            goToPositionByTime(-18, 60, .4, .3, 120, 3, DELIVER_SECOND_WOBBLE, SECOND_DRIVE_BACKWARDS);
+            goToPositionByTime(-18, 53, .5, .3, 90, 1, SECOND_DRIVE_BACKWARDS, DRIVE_TO_LINE);
             goToPositionByTime(20, 70, .75, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
         }
         else if (path == 1) {
-            goToPositionByTime(-1, 90, .5, .3, 90, 3, STARTING_DRIVE, DRIVE_TO_SHOOT);
+            goToPositionByTime(-1, 90, .5, .3, 90, 3, STARTING_DRIVE, DRIVE_BACKWARDS);
             goToPositionByTime(-1, 81, .5, .3, 90, 1, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
             goToPositionByTime(25, 56, .75, .3, 90, 4, DRIVE_TO_SHOOT, SHOOT_RINGS);
             shootThreeRings(SHOOT_RINGS, DRIVE_TO_START_WALL,9);
             goToPositionByTime(32, 0, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
             goToPositionByTime(9, -1, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
-            goToPositionByTime(20, 48, .5, .3, 90, 2, DRIVE_FORWARD_RIGHT, DELIVER_SECOND_WOBBLE);
-            goToPositionByTime(1, 86, .5, .3, 90, 3, DELIVER_SECOND_WOBBLE, DRIVE_TO_LINE);
-            goToPositionByTime(1, 72, .75, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
+            goToPositionByTime(18, 48, .5, .3, 90, 2, DRIVE_FORWARD_RIGHT, DELIVER_SECOND_WOBBLE);
+            goToPositionByTime(0, 85, .5, .3, 90, 3, DELIVER_SECOND_WOBBLE, DRIVE_TO_LINE);
+            goToPositionByTime(0, 72, .75, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
         }
         else if (path == 4) {
-            goToPositionByTime(-20, 112, .5, .3, 90, 3, STARTING_DRIVE, DRIVE_TO_SHOOT);
-            goToPositionByTime(-20, 105, .5, .3, 90, 1, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
-            goToPositionByTime(24, 56, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
+            goToPositionByTime(-24, 112, .5, .3, 90, 2.5, STARTING_DRIVE, DRIVE_BACKWARDS);
+            goToPositionByTime(-23, 100, .5, .3, 90, .4, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
+            goToPositionByTime(24, 56, .7, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
             shootThreeRings(SHOOT_RINGS, DRIVE_TO_START_WALL,9);
-            goToPositionByTime(32, 0, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
-            goToPositionByTime(12, -1, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
-            goToPositionByTime(20, 48, .5, .3, 90, 2, DRIVE_FORWARD_RIGHT, DELIVER_SECOND_WOBBLE);
-            goToPositionByTime(-18, 110, .5, .3, 90, 3, DELIVER_SECOND_WOBBLE, SECOND_DRIVE_BACKWARDS);
-            goToPositionByTime(-19, 105, .5, .3, 90, 1, SECOND_DRIVE_BACKWARDS, DRIVE_TO_LINE);
-            goToPositionByTime(24, 70, .75, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
+            goToPositionByTime(30, -1, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
+            goToPositionByTime(7.5, -3, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
+            goToPositionByTime(20, 48, .5, .3, 90, 1.5, DRIVE_FORWARD_RIGHT, DELIVER_SECOND_WOBBLE);
+            goToPositionByTime(-23, 106, .5, .3, 120, 3.8, DELIVER_SECOND_WOBBLE, DRIVE_TO_LINE);
+            goToPositionByTime(-23, 70, .5, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
         }
         telemetry.addData("Path", path);
         telemetry.addData("Current State", autoState);
