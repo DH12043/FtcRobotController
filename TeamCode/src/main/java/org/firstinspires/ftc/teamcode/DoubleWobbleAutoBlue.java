@@ -150,6 +150,7 @@ public class DoubleWobbleAutoBlue extends OpMode{
 
     private double launchPosition = .25;
     private double storePosition = .7;
+    private double downPosition = .4;
 
     double startShootingTime = 0;
 
@@ -209,7 +210,7 @@ public class DoubleWobbleAutoBlue extends OpMode{
         goToPositionByTime(-15, 45, 1, .3, 90, 1, INIT_STATE, STARTING_DRIVE);
 
         if (path == 0){
-            goToPositionByTime(-20, 66, .5, .3, 90, 1.75, STARTING_DRIVE, DRIVE_BACKWARDS);
+            goToPositionByTime(-20, 66, .4, .3, 90, 1.75, STARTING_DRIVE, DRIVE_BACKWARDS);
             goToPositionByTime(-20, 57, .5, .3, 90, 1, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
             goToPositionByTime(23, 56, .75, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
             shootThreeRings(SHOOT_RINGS, DRIVE_TO_START_WALL,9);

@@ -85,14 +85,17 @@ public class PowerSurgeTeleOp extends OpMode {
     private boolean firstPressShooterToggleButton = true;
     private boolean firstPressShooterFeedingToggleButton = true;
     private boolean firstPressShooterSpeedToggleButton = true;
+    private boolean firstPressShootPowershot = true;
     private boolean shooterOn = false;
     private boolean shooterIsFast = true;
+    private boolean shooterIsPowershot = false;
     private boolean shooterFeedingOn = false;
     private boolean bucketUp = false;
     private boolean firstPressTransferToggleButton = false;
 
     private double launchPosition = .25;
     private double storePosition = .7;
+    private double downPosition = .4;
 
     private double shooterTicksPerRevolution = 103.6;
 
@@ -118,14 +121,16 @@ public class PowerSurgeTeleOp extends OpMode {
     private double movement_turn;
 
     private boolean shooterToggleButton;
-    private boolean shooterFeedingServoButton;
+    private double shooterFeedingServoButton;
     private boolean shooterSpeedToggleButton;
     private boolean transferToggleButton;
     private boolean intakeToggleButton;
-    private boolean driveToLaunchButton;
+    private boolean driveToLaunchButton = false;
     private boolean wobbleButton;
     private boolean wobbleOffsetUp;
     private double wobbleOffsetDown;
+    private boolean intakeReverse;
+    private boolean shootPowershot;
 
    //MOTORS AND SERVOS -----------------------------------------------------------------------------
 
@@ -184,10 +189,10 @@ public class PowerSurgeTeleOp extends OpMode {
         double currentTimeAtCheckLPS = getRuntime();
         oldCheckLPS();
 
-        driveToLaunchButton = gamepad1.right_bumper;
+        //driveToLaunchButton = gamepad1.right_bumper;
 
         if(driveToLaunchButton) {
-            goToPosition(0, 0, 1, 1, 0);
+            //goToPosition(0, 0, 1, 1, 0);
         }
         else if(slowDriveSpeed) {
             movement_y = .5 * DeadModifier(-gamepad1.left_stick_y);
@@ -201,10 +206,12 @@ public class PowerSurgeTeleOp extends OpMode {
         }
 
         shooterToggleButton = gamepad1.a;
-        shooterFeedingServoButton = gamepad1.x;
+        shootPowershot = gamepad1.x;
+        shooterFeedingServoButton = gamepad1.right_trigger;
         transferToggleButton = gamepad1.b;
-        wobbleButton = gamepad1.dpad_up;
         shooterSpeedToggleButton = gamepad1.y;
+        wobbleButton = gamepad1.dpad_up;
+        intakeReverse = gamepad1.dpad_down;
         wobbleOffsetUp = gamepad1.left_bumper;
         wobbleOffsetDown = gamepad1.left_trigger;
 
@@ -485,12 +492,7 @@ public class PowerSurgeTeleOp extends OpMode {
     private void runShooter() {
         if(shooterSpeedToggleButton) {
             if (firstPressShooterSpeedToggleButton) {
-                if (shooterIsFast) {
-                    shooterIsFast = false;
-                }
-                else {
-                    shooterIsFast = true;
-                }
+                shooterIsFast = !shooterIsFast;
                 firstPressShooterSpeedToggleButton = false;
             }
         }
@@ -498,14 +500,19 @@ public class PowerSurgeTeleOp extends OpMode {
             firstPressShooterSpeedToggleButton = true;
         }
 
+        if (shootPowershot) {
+            if (firstPressShootPowershot) {
+                shooterIsPowershot = !shooterIsPowershot;
+                firstPressShootPowershot = false;
+            }
+        }
+        else {
+            firstPressShootPowershot = true;
+        }
+
         if (shooterToggleButton) {
             if (firstPressShooterToggleButton) {
-                if (shooterOn) {
-                    shooterOn = false;
-                }
-                else {
-                    shooterOn = true;
-                }
+                shooterOn = !shooterOn;
                 firstPressShooterToggleButton = false;
             }
         }
@@ -514,7 +521,10 @@ public class PowerSurgeTeleOp extends OpMode {
         }
 
         if (shooterOn) {
-            if (shooterIsFast) {
+            if (shooterIsPowershot) {
+                ShooterMotor.setPower(.6);
+            }
+            else if (shooterIsFast) {
                 ShooterMotor.setPower(.75); // was .8 before adding mass  //.6 for power shots
             }
             else {
@@ -536,20 +546,29 @@ public class PowerSurgeTeleOp extends OpMode {
         }
 
         if (bucketUp) {
-            if (shooterFeedingServoButton) {
+            if (shooterFeedingServoButton > .5) {
                 ShooterFeedingServo.setPosition(launchPosition);
             }
             else{
                 ShooterFeedingServo.setPosition(storePosition);
             }
             TransferMotor.setTargetPosition(-165);
-            IntakeMotor.setPower(0);
-
+            if (intakeReverse) {
+                IntakeMotor.setPower(.5);
+            }
+            else {
+                IntakeMotor.setPower(0);
+            }
         }
         else {
-            ShooterFeedingServo.setPosition(storePosition);
+            ShooterFeedingServo.setPosition(downPosition);
             TransferMotor.setTargetPosition(0);
-            IntakeMotor.setPower(-.5);
+            if (intakeReverse) {
+                IntakeMotor.setPower(.5);
+            }
+            else {
+                IntakeMotor.setPower(-.5);
+            }
         }
 
         currentShooterTickCount = ShooterMotor.getCurrentPosition();
@@ -606,7 +625,7 @@ public class PowerSurgeTeleOp extends OpMode {
     }
 
     private void runWobble() {
-        if (wobbleOffsetUp == true) {
+        if (wobbleOffsetUp) {
             globalWobbleOffset = globalWobbleOffset - 3;
         }
         else if (wobbleOffsetDown > .5) {
