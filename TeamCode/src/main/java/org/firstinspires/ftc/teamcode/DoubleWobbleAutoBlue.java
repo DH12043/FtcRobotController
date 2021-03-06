@@ -148,11 +148,12 @@ public class DoubleWobbleAutoBlue extends OpMode{
     private boolean shooterFeedingOn = false;
     private boolean firstRunShootThreeRings = true;
 
-    private double launchPosition = .25;
-    private double storePosition = .7;
-    private double downPosition = .4;
+    private double launchPosition = .53;
+    private double storePosition = 1;
+    private double downPosition = .58;
 
     double startShootingTime = 0;
+    double globalStartTime;
 
     private double shooterTicksPerRevolution = 103.6;
 
@@ -192,12 +193,12 @@ public class DoubleWobbleAutoBlue extends OpMode{
 
         //startWobble();
 
-        ShooterMotor.setPower(.75);
-
         startIMU();
         startOdometry();
 
         startShooter();
+
+        globalStartTime = getRuntime();
 
         //ShooterMotor.setPower(.8);
         telemetry.addData("Status", "Odometry System has started");
@@ -223,7 +224,7 @@ public class DoubleWobbleAutoBlue extends OpMode{
         else if (path == 1) {
             goToPositionByTime(-1, 90, .5, .3, 90, 3, STARTING_DRIVE, DRIVE_BACKWARDS);
             goToPositionByTime(-1, 81, .5, .3, 90, 1, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
-            goToPositionByTime(25, 56, .75, .3, 90, 4, DRIVE_TO_SHOOT, SHOOT_RINGS);
+            goToPositionByTime(25, 50, .75, .3, 90, 4, DRIVE_TO_SHOOT, SHOOT_RINGS);
             shootThreeRings(SHOOT_RINGS, DRIVE_TO_START_WALL,9);
             goToPositionByTime(32, 0, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
             goToPositionByTime(9, -1, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
@@ -242,6 +243,11 @@ public class DoubleWobbleAutoBlue extends OpMode{
             goToPositionByTime(-23, 106, .5, .3, 120, 3.8, DELIVER_SECOND_WOBBLE, DRIVE_TO_LINE);
             goToPositionByTime(-23, 70, .5, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
         }
+
+        if (currentTime - globalStartTime > 29) {
+            TransferMotor.setTargetPosition(0);
+        }
+
         telemetry.addData("Path", path);
         telemetry.addData("Current State", autoState);
         telemetry.update();
@@ -621,7 +627,7 @@ public class DoubleWobbleAutoBlue extends OpMode{
         ShooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         ShooterFeedingServo = hardwareMap.servo.get("ShooterFeedingServo");
-        ShooterFeedingServo.setPosition(storePosition);
+        ShooterFeedingServo.setPosition(downPosition);
 
         TransferMotor = hardwareMap.dcMotor.get("TransferMotor");
         TransferMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -631,7 +637,9 @@ public class DoubleWobbleAutoBlue extends OpMode{
         TransferMotor.setPower(.4);
     }
     private void startShooter() {
-        TransferMotor.setTargetPosition(-162);
+        ShooterMotor.setPower(.75);
+        ShooterFeedingServo.setPosition(storePosition);
+        TransferMotor.setTargetPosition(-185);
     }
 
     /*private void shootOneRing(int thisState, int nextState, double timeout) {

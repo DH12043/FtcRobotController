@@ -93,11 +93,16 @@ public class PowerSurgeTeleOp extends OpMode {
     private boolean bucketUp = false;
     private boolean firstPressTransferToggleButton = false;
 
-    private double launchPosition = .25;
-    private double storePosition = .7;
-    private double downPosition = .4;
+    private double launchPosition = .53;
+    private double storePosition = 1;
+    private double downPosition = .58;
 
     private double shooterTicksPerRevolution = 103.6;
+
+    private boolean transferOffsetUp;
+    private double transferOffsetDown;
+
+    private int globalTransferOffset;
 
     private int currentShooterTickCount;
     private int previousShooterTickCount;
@@ -130,6 +135,7 @@ public class PowerSurgeTeleOp extends OpMode {
     private boolean wobbleOffsetUp;
     private double wobbleOffsetDown;
     private boolean intakeReverse;
+    private boolean backupIntakeReverse;
     private boolean shootPowershot;
 
    //MOTORS AND SERVOS -----------------------------------------------------------------------------
@@ -207,13 +213,16 @@ public class PowerSurgeTeleOp extends OpMode {
 
         shooterToggleButton = gamepad1.a;
         shootPowershot = gamepad1.x;
-        shooterFeedingServoButton = gamepad1.right_trigger;
         transferToggleButton = gamepad1.b;
         shooterSpeedToggleButton = gamepad1.y;
         wobbleButton = gamepad1.dpad_up;
         intakeReverse = gamepad1.dpad_down;
-        wobbleOffsetUp = gamepad1.left_bumper;
-        wobbleOffsetDown = gamepad1.left_trigger;
+        backupIntakeReverse = gamepad2.dpad_down;
+        shooterFeedingServoButton = gamepad1.right_trigger;
+        wobbleOffsetUp = gamepad2.left_bumper;
+        wobbleOffsetDown = gamepad2.left_trigger;
+        transferOffsetUp = gamepad2.right_bumper;
+        transferOffsetDown = gamepad2.right_trigger;
 
         applyMovement();
         checkOdometry();
@@ -479,7 +488,7 @@ public class PowerSurgeTeleOp extends OpMode {
         ShooterMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         ShooterFeedingServo = hardwareMap.servo.get("ShooterFeedingServo");
-        ShooterFeedingServo.setPosition(storePosition);
+        ShooterFeedingServo.setPosition(downPosition);
 
         TransferMotor = hardwareMap.dcMotor.get("TransferMotor");
         TransferMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -522,12 +531,15 @@ public class PowerSurgeTeleOp extends OpMode {
 
         if (shooterOn) {
             if (shooterIsPowershot) {
-                ShooterMotor.setPower(.6);
+                telemetry.addData("Shooting State", "POWERSHOTS");
+                ShooterMotor.setPower(.7);
             }
             else if (shooterIsFast) {
+                telemetry.addData("Shooting State", "HIGH GOAL");
                 ShooterMotor.setPower(.75); // was .8 before adding mass  //.6 for power shots
             }
             else {
+                telemetry.addData("Shooting State", "LOW GOAL");
                 ShooterMotor.setPower(.25);
             }
         }
@@ -545,6 +557,13 @@ public class PowerSurgeTeleOp extends OpMode {
             firstPressTransferToggleButton = true;
         }
 
+        if (transferOffsetUp) {
+            globalTransferOffset = globalTransferOffset - 2;
+        }
+        else if (transferOffsetDown > .5) {
+            globalTransferOffset = globalTransferOffset + 2;
+        }
+
         if (bucketUp) {
             if (shooterFeedingServoButton > .5) {
                 ShooterFeedingServo.setPosition(launchPosition);
@@ -552,9 +571,9 @@ public class PowerSurgeTeleOp extends OpMode {
             else{
                 ShooterFeedingServo.setPosition(storePosition);
             }
-            TransferMotor.setTargetPosition(-165);
-            if (intakeReverse) {
-                IntakeMotor.setPower(.5);
+            TransferMotor.setTargetPosition(-185 + globalTransferOffset);
+            if (intakeReverse || backupIntakeReverse) {
+                IntakeMotor.setPower(1);
             }
             else {
                 IntakeMotor.setPower(0);
@@ -562,12 +581,12 @@ public class PowerSurgeTeleOp extends OpMode {
         }
         else {
             ShooterFeedingServo.setPosition(downPosition);
-            TransferMotor.setTargetPosition(0);
-            if (intakeReverse) {
-                IntakeMotor.setPower(.5);
+            TransferMotor.setTargetPosition(15 + globalTransferOffset);
+            if (intakeReverse || backupIntakeReverse) {
+                IntakeMotor.setPower(1);
             }
             else {
-                IntakeMotor.setPower(-.5);
+                IntakeMotor.setPower(-1);
             }
         }
 
@@ -599,7 +618,7 @@ public class PowerSurgeTeleOp extends OpMode {
                     intakeOn = false;
                 }
                 else {
-                    IntakeMotor.setPower(-.5);
+                    IntakeMotor.setPower(-1);
                     intakeOn = true;
                 }
                 firstPressIntakeToggleButton = false;
