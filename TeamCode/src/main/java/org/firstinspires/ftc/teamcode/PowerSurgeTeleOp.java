@@ -92,6 +92,10 @@ public class PowerSurgeTeleOp extends OpMode {
     private boolean shooterFeedingOn = false;
     private boolean bucketUp = false;
     private boolean firstPressTransferToggleButton = false;
+    private boolean firstPressShootRings;
+
+    private boolean firstPressPowershotToRight = true;
+    private boolean firstPressPowershotToLeft = true;
 
     private double launchPosition = .53;
     private double storePosition = 1;
@@ -135,8 +139,11 @@ public class PowerSurgeTeleOp extends OpMode {
     private boolean wobbleOffsetUp;
     private double wobbleOffsetDown;
     private boolean intakeReverse;
+    private boolean intakeStop;
     private boolean backupIntakeReverse;
     private boolean shootPowershot;
+    private boolean powershotToRight;
+    private boolean powershotToLeft;
 
    //MOTORS AND SERVOS -----------------------------------------------------------------------------
 
@@ -170,7 +177,7 @@ public class PowerSurgeTeleOp extends OpMode {
 
     @Override
     public void init() {
-        telemetry.addData("Version Number", "12/22/20");
+        telemetry.addData("Version Number", "3/6/21");
         initializeDriveTrain();
         initializeOdometry();
         initializeIMU();
@@ -195,22 +202,7 @@ public class PowerSurgeTeleOp extends OpMode {
         double currentTimeAtCheckLPS = getRuntime();
         oldCheckLPS();
 
-        //driveToLaunchButton = gamepad1.right_bumper;
-
-        if(driveToLaunchButton) {
-            //goToPosition(0, 0, 1, 1, 0);
-        }
-        else if(slowDriveSpeed) {
-            movement_y = .5 * DeadModifier(-gamepad1.left_stick_y);
-            movement_x = .5 * DeadModifier(gamepad1.left_stick_x);
-            movement_turn = .5 * DeadModifier(.75 * gamepad1.right_stick_x);
-        }
-        else {
-            movement_y = DeadModifier(-gamepad1.left_stick_y);
-            movement_x = DeadModifier(gamepad1.left_stick_x);
-            movement_turn = DeadModifier(.75 * gamepad1.right_stick_x);
-        }
-
+        driveToLaunchButton = gamepad1.right_bumper;
         shooterToggleButton = gamepad1.a;
         shootPowershot = gamepad1.x;
         transferToggleButton = gamepad1.b;
@@ -218,11 +210,53 @@ public class PowerSurgeTeleOp extends OpMode {
         wobbleButton = gamepad1.dpad_up;
         intakeReverse = gamepad1.dpad_down;
         backupIntakeReverse = gamepad2.dpad_down;
+        intakeStop = gamepad2.dpad_up;
         shooterFeedingServoButton = gamepad1.right_trigger;
         wobbleOffsetUp = gamepad2.left_bumper;
         wobbleOffsetDown = gamepad2.left_trigger;
         transferOffsetUp = gamepad2.right_bumper;
         transferOffsetDown = gamepad2.right_trigger;
+        powershotToRight = gamepad2.b;
+        powershotToLeft = gamepad2.x;
+
+        if(powershotToLeft) {
+            if (firstPressPowershotToLeft) {
+                ScoringXPosition = RobotXPosition;
+                ScoringYPosition = RobotYPosition;
+                ScoringRotation = RobotRotation;
+                firstPressPowershotToLeft = false;
+            }
+            goToPosition(ScoringXPosition, ScoringYPosition, 1, .75, ScoringRotation+10);
+        }
+        else if (powershotToRight) {
+            if (firstPressPowershotToRight) {
+                ScoringXPosition = RobotXPosition;
+                ScoringYPosition = RobotYPosition;
+                ScoringRotation = RobotRotation;
+                firstPressPowershotToRight = false;
+            }
+            goToPosition(ScoringXPosition, ScoringYPosition, 1, .75, ScoringRotation-10);
+        }
+        else if(driveToLaunchButton) {
+            goToPosition(ScoringXPosition, ScoringYPosition, 1, .75, ScoringRotation);
+            telemetry.addData("Drive Mode", "Driving to Launch");
+        }
+        else if(slowDriveSpeed) {
+            movement_y = .5 * DeadModifier(-gamepad1.left_stick_y);
+            movement_x = .5 * DeadModifier(-gamepad1.left_stick_x);
+            movement_turn = .5 * DeadModifier(.75 * -gamepad1.right_stick_x);
+
+            firstPressPowershotToRight = true;
+            firstPressPowershotToLeft = true;
+        }
+        else {
+            movement_y = DeadModifier(-gamepad1.left_stick_y);
+            movement_x = DeadModifier(-gamepad1.left_stick_x);
+            movement_turn = DeadModifier(.75 * -gamepad1.right_stick_x);
+
+            firstPressPowershotToRight = true;
+            firstPressPowershotToLeft = true;
+        }
 
         applyMovement();
         checkOdometry();
@@ -268,10 +302,10 @@ public class PowerSurgeTeleOp extends OpMode {
         }
         lastUpdateTime = currTime;
 
-        double fl_power_raw = movement_y+movement_turn+movement_x;
-        double bl_power_raw = movement_y+movement_turn-movement_x;
-        double br_power_raw = -movement_y+movement_turn-movement_x;
-        double fr_power_raw = -movement_y+movement_turn+movement_x;
+        double fl_power_raw = -movement_y+movement_turn+movement_x;
+        double bl_power_raw = -movement_y+movement_turn-movement_x;
+        double br_power_raw = movement_y+movement_turn-movement_x;
+        double fr_power_raw = movement_y+movement_turn+movement_x;
 
         //find the maximum of the powers
         double maxRawPower = Math.abs(fl_power_raw);
@@ -291,10 +325,10 @@ public class PowerSurgeTeleOp extends OpMode {
         fr_power_raw *= scaleDownAmount;
 
         //now we can set the powers ONLY IF THEY HAVE CHANGED TO AVOID SPAMMING USB COMMUNICATIONS
-        FrontLeft.setPower(fl_power_raw);
+        FrontLeft.setPower(-fl_power_raw);
         BackLeft.setPower(-bl_power_raw);
-        BackRight.setPower(br_power_raw);
-        FrontRight.setPower(fr_power_raw);
+        BackRight.setPower(-br_power_raw);
+        FrontRight.setPower(-fr_power_raw);
     }
 
     //ODOMETRY -------------------------------------------------------------------------------------
@@ -310,10 +344,12 @@ public class PowerSurgeTeleOp extends OpMode {
 
         //These values also affect the drive motors so we also reversed FrontRight
         verticalLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        verticalRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        //verticalRight.setDirection(DcMotorSimple.Direction.REVERSE);
         horizontal.setDirection(DcMotorSimple.Direction.REVERSE);
 
         FrontRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        FrontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        BackLeft.setDirection(DcMotorSimple.Direction.REVERSE);
 
         verticalRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         verticalLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -324,7 +360,7 @@ public class PowerSurgeTeleOp extends OpMode {
         //StartingRotation = Double.parseDouble(ReadWriteFile.readFile(startingθpositionFile).trim());
         StartingXPosition = 0;
         StartingYPosition = 0;
-        StartingRotation = 0;
+        StartingRotation = 90;
 
     }
 
@@ -338,7 +374,7 @@ public class PowerSurgeTeleOp extends OpMode {
 
     private void checkOdometry() {
         RobotXPosition = (globalPositionUpdate.returnXCoordinate() / COUNTS_PER_INCH) + StartingXPosition;
-        RobotYPosition = (globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH) + StartingYPosition;
+        RobotYPosition = -(globalPositionUpdate.returnYCoordinate() / COUNTS_PER_INCH) + StartingYPosition;
         RobotRotation = (globalPositionUpdate.returnOrientation()) + StartingRotation;
 
         if (RobotRotation < 0){
@@ -365,8 +401,9 @@ public class PowerSurgeTeleOp extends OpMode {
     private void goToPosition(double x, double y, double maxMovementSpeed, double maxTurnSpeed, double preferredAngle) {
         distanceToTarget = Math.hypot(x-RobotXPosition, y-RobotYPosition);
         double absoluteAngleToTarget = Math.atan2(y-RobotYPosition, x-RobotXPosition);
-        double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget
-                - Math.toRadians(RobotRotation) + Math.toRadians(90));
+        //        double relativeAngleToPoint = AngleWrap(-absoluteAngleToTarget - Math.toRadians(RobotRotation)
+        //         + Math.toRadians(90));
+        double relativeAngleToPoint = AngleWrap(absoluteAngleToTarget - Math.toRadians(RobotRotation));
 
         double relativeXToPoint = 2 * Math.sin(relativeAngleToPoint);
         double relativeYToPoint = Math.cos(relativeAngleToPoint);
@@ -385,9 +422,10 @@ public class PowerSurgeTeleOp extends OpMode {
         movement_x = movementXPower * Range.clip(maxMovementSpeed, -xDecelLimiter, xDecelLimiter);
         movement_y = movementYPower * Range.clip(maxMovementSpeed, -yDecelLimiter, yDecelLimiter);
 
-        if (distanceToTarget < 1) {
+        if (distanceToTarget < 1 && Math.abs(relativeAngleToPoint) < 3) {
             movement_turn = 0;
-        } else {
+        }
+        else {
             //movement_turn = Range.clip(Range.clip(relativeTurnAngle / Math.toRadians(30),
             //        -1, 1) * maxTurnSpeed, -turnDecelLimiter, turnDecelLimiter);
             movement_turn = Range.clip(relativeTurnAngle / Math.toRadians(TURNING_DECELERATION_START_POINT), -1, 1) * maxTurnSpeed;
@@ -567,16 +605,28 @@ public class PowerSurgeTeleOp extends OpMode {
         if (bucketUp) {
             if (shooterFeedingServoButton > .5) {
                 ShooterFeedingServo.setPosition(launchPosition);
+                if (firstPressShootRings) {
+                    ScoringXPosition = RobotXPosition;
+                    ScoringYPosition = RobotYPosition;
+                    ScoringRotation = RobotRotation;
+                    firstPressShootRings = false;
+                }
             }
             else{
                 ShooterFeedingServo.setPosition(storePosition);
+                firstPressShootRings = true;
             }
-            TransferMotor.setTargetPosition(-185 + globalTransferOffset);
+
+            TransferMotor.setTargetPosition(-195 + globalTransferOffset);
+
             if (intakeReverse || backupIntakeReverse) {
                 IntakeMotor.setPower(1);
             }
-            else {
+            else if (intakeStop) {
                 IntakeMotor.setPower(0);
+            }
+            else {
+                IntakeMotor.setPower(-1);
             }
         }
         else {
@@ -584,6 +634,9 @@ public class PowerSurgeTeleOp extends OpMode {
             TransferMotor.setTargetPosition(15 + globalTransferOffset);
             if (intakeReverse || backupIntakeReverse) {
                 IntakeMotor.setPower(1);
+            }
+            else if (intakeStop) {
+                IntakeMotor.setPower(0);
             }
             else {
                 IntakeMotor.setPower(-1);

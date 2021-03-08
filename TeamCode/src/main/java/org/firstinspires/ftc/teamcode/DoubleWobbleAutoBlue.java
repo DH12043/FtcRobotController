@@ -224,7 +224,7 @@ public class DoubleWobbleAutoBlue extends OpMode{
         else if (path == 1) {
             goToPositionByTime(-1, 90, .5, .3, 90, 3, STARTING_DRIVE, DRIVE_BACKWARDS);
             goToPositionByTime(-1, 81, .5, .3, 90, 1, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
-            goToPositionByTime(25, 50, .75, .3, 90, 4, DRIVE_TO_SHOOT, SHOOT_RINGS);
+            goToPositionByTime(25, 55, .75, .3, 90, 4, DRIVE_TO_SHOOT, SHOOT_RINGS);
             shootThreeRings(SHOOT_RINGS, DRIVE_TO_START_WALL,9);
             goToPositionByTime(32, 0, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
             goToPositionByTime(9, -1, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
@@ -235,10 +235,10 @@ public class DoubleWobbleAutoBlue extends OpMode{
         else if (path == 4) {
             goToPositionByTime(-24, 112, .5, .3, 90, 2.5, STARTING_DRIVE, DRIVE_BACKWARDS);
             goToPositionByTime(-23, 100, .5, .3, 90, .4, DRIVE_BACKWARDS, DRIVE_TO_SHOOT);
-            goToPositionByTime(24, 56, .7, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
+            goToPositionByTime(24, 54, .7, .3, 90, 3, DRIVE_TO_SHOOT, SHOOT_RINGS);
             shootThreeRings(SHOOT_RINGS, DRIVE_TO_START_WALL,9);
             goToPositionByTime(30, -1, .5, .3, 90, 2, DRIVE_TO_START_WALL, DRIVE_TO_SECOND_WOBBLE);
-            goToPositionByTime(7.5, -3, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
+            goToPositionByTime(8, -3, .5, .3, 90, 1.5, DRIVE_TO_SECOND_WOBBLE, DRIVE_FORWARD_RIGHT);
             goToPositionByTime(20, 48, .5, .3, 90, 1.5, DRIVE_FORWARD_RIGHT, DELIVER_SECOND_WOBBLE);
             goToPositionByTime(-23, 106, .5, .3, 120, 3.8, DELIVER_SECOND_WOBBLE, DRIVE_TO_LINE);
             goToPositionByTime(-23, 70, .5, .3, 90, 3, DRIVE_TO_LINE, DRIVE_TO_LINE);
@@ -779,6 +779,5 @@ public class DoubleWobbleAutoBlue extends OpMode{
             autoState = nextState;
         }
     }
-
 }
 
