@@ -21,6 +21,9 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
+import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
+import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import com.qualcomm.robotcore.util.Range;
 import java.io.File;
@@ -34,6 +37,10 @@ public class PowerSurgeTeleOp extends OpMode {
 
     BNO055IMU imu;
     Orientation angles;
+
+    TouchSensor bottomTransferSensor;
+    TouchSensor topTransferSensor;
+    TouchSensor intakeSensor;
 
     DcMotor verticalRight, verticalLeft, horizontal;
 
@@ -96,6 +103,10 @@ public class PowerSurgeTeleOp extends OpMode {
 
     private boolean firstPressPowershotToRight = true;
     private boolean firstPressPowershotToLeft = true;
+    private boolean firstPressPowershotSequence = true;
+
+    private double startPowershotTime;
+    private double endDownTime;
 
     private double launchPosition = .53;
     private double storePosition = 1;
@@ -144,6 +155,7 @@ public class PowerSurgeTeleOp extends OpMode {
     private boolean shootPowershot;
     private boolean powershotToRight;
     private boolean powershotToLeft;
+    private boolean powershotSequence;
 
    //MOTORS AND SERVOS -----------------------------------------------------------------------------
 
@@ -199,7 +211,7 @@ public class PowerSurgeTeleOp extends OpMode {
 
     @Override
     public void loop() {
-        double currentTimeAtCheckLPS = getRuntime();
+        double currentTime = getRuntime();
         oldCheckLPS();
 
         driveToLaunchButton = gamepad1.right_bumper;
@@ -218,15 +230,54 @@ public class PowerSurgeTeleOp extends OpMode {
         transferOffsetDown = gamepad2.right_trigger;
         powershotToRight = gamepad2.b;
         powershotToLeft = gamepad2.x;
+        powershotSequence = gamepad2.y;
 
-        if(powershotToLeft) {
+        if(powershotSequence) {
+            if (bucketUp) {
+                if (firstPressPowershotSequence) {
+                    ScoringXPosition = RobotXPosition;
+                    ScoringYPosition = RobotYPosition;
+                    ScoringRotation = RobotRotation;
+                    startPowershotTime = getRuntime();
+                    firstPressPowershotSequence = false;
+                }
+                if (currentTime - startPowershotTime < .5) {
+                    goToPosition(ScoringXPosition - 3, ScoringYPosition, 1, .75, ScoringRotation);
+                    ShooterFeedingServo.setPosition(storePosition);
+                }
+                else if (currentTime - startPowershotTime < 1) {
+                    goToPosition(ScoringXPosition - 3, ScoringYPosition, 1, .75, ScoringRotation);
+                    ShooterFeedingServo.setPosition(launchPosition);
+                }
+                else if (currentTime - startPowershotTime < 1.5) {
+                    ShooterFeedingServo.setPosition(storePosition);
+                    goToPosition(ScoringXPosition - 10.5, ScoringYPosition, 1, .75, ScoringRotation);
+                }
+                else if (currentTime - startPowershotTime < 2) {
+                    ShooterFeedingServo.setPosition(launchPosition);
+                    goToPosition(ScoringXPosition - 10.5, ScoringYPosition, 1, .75, ScoringRotation);
+                }
+                else if (currentTime - startPowershotTime < 2.5) {
+                    ShooterFeedingServo.setPosition(storePosition);
+                    goToPosition(ScoringXPosition - 18, ScoringYPosition, 1, .75, ScoringRotation);
+                }
+                else if (currentTime - startPowershotTime < 3) {
+                    ShooterFeedingServo.setPosition(launchPosition);
+                    goToPosition(ScoringXPosition - 18, ScoringYPosition, 1, .75, ScoringRotation);
+                }
+                else if (currentTime - startPowershotTime < 3.5) {
+                    ShooterFeedingServo.setPosition(storePosition);
+                }
+            }
+        }
+        else if(powershotToLeft) {
             if (firstPressPowershotToLeft) {
                 ScoringXPosition = RobotXPosition;
                 ScoringYPosition = RobotYPosition;
                 ScoringRotation = RobotRotation;
                 firstPressPowershotToLeft = false;
             }
-            goToPosition(ScoringXPosition, ScoringYPosition, 1, .75, ScoringRotation+10);
+            goToPosition(ScoringXPosition - 7.5, ScoringYPosition, 1, .75, ScoringRotation);
         }
         else if (powershotToRight) {
             if (firstPressPowershotToRight) {
@@ -235,7 +286,7 @@ public class PowerSurgeTeleOp extends OpMode {
                 ScoringRotation = RobotRotation;
                 firstPressPowershotToRight = false;
             }
-            goToPosition(ScoringXPosition, ScoringYPosition, 1, .75, ScoringRotation-10);
+            goToPosition(ScoringXPosition + 7.5, ScoringYPosition, 1, .75, ScoringRotation);
         }
         else if(driveToLaunchButton) {
             goToPosition(ScoringXPosition, ScoringYPosition, 1, .75, ScoringRotation);
@@ -248,6 +299,7 @@ public class PowerSurgeTeleOp extends OpMode {
 
             firstPressPowershotToRight = true;
             firstPressPowershotToLeft = true;
+            firstPressPowershotSequence = true;
         }
         else {
             movement_y = DeadModifier(-gamepad1.left_stick_y);
@@ -256,6 +308,7 @@ public class PowerSurgeTeleOp extends OpMode {
 
             firstPressPowershotToRight = true;
             firstPressPowershotToLeft = true;
+            firstPressPowershotSequence = true;
         }
 
         applyMovement();
@@ -422,7 +475,7 @@ public class PowerSurgeTeleOp extends OpMode {
         movement_x = movementXPower * Range.clip(maxMovementSpeed, -xDecelLimiter, xDecelLimiter);
         movement_y = movementYPower * Range.clip(maxMovementSpeed, -yDecelLimiter, yDecelLimiter);
 
-        if (distanceToTarget < 1 && Math.abs(relativeAngleToPoint) < 3) {
+        if (distanceToTarget < 1 && Math.toDegrees(Math.abs(relativeAngleToPoint)) < 3) {
             movement_turn = 0;
         }
         else {
@@ -588,6 +641,7 @@ public class PowerSurgeTeleOp extends OpMode {
         if (transferToggleButton) {
             if (firstPressTransferToggleButton) {
                 bucketUp = !bucketUp;
+                endDownTime = getRuntime();
                 firstPressTransferToggleButton = false;
             }
         }
@@ -603,18 +657,25 @@ public class PowerSurgeTeleOp extends OpMode {
         }
 
         if (bucketUp) {
-            if (shooterFeedingServoButton > .5) {
-                ShooterFeedingServo.setPosition(launchPosition);
-                if (firstPressShootRings) {
-                    ScoringXPosition = RobotXPosition;
-                    ScoringYPosition = RobotYPosition;
-                    ScoringRotation = RobotRotation;
-                    firstPressShootRings = false;
+            if(!powershotSequence) {
+                if (shooterFeedingServoButton > .5) {
+                    ShooterFeedingServo.setPosition(launchPosition);
+                    if (firstPressShootRings) {
+                        ScoringXPosition = RobotXPosition;
+                        ScoringYPosition = RobotYPosition;
+                        ScoringRotation = RobotRotation;
+                        firstPressShootRings = false;
+                    }
                 }
-            }
-            else{
-                ShooterFeedingServo.setPosition(storePosition);
-                firstPressShootRings = true;
+                else {
+                    if (currentTime - endDownTime < .3) {
+                        ShooterFeedingServo.setPosition(downPosition);
+                    }
+                    else {
+                        ShooterFeedingServo.setPosition(storePosition);
+                    }
+                    firstPressShootRings = true;
+                }
             }
 
             TransferMotor.setTargetPosition(-195 + globalTransferOffset);
@@ -626,7 +687,7 @@ public class PowerSurgeTeleOp extends OpMode {
                 IntakeMotor.setPower(0);
             }
             else {
-                IntakeMotor.setPower(-1);
+                IntakeMotor.setPower(0);
             }
         }
         else {
@@ -738,6 +799,9 @@ public class PowerSurgeTeleOp extends OpMode {
         telemetry.addData("GlobalWobbleOffset", globalWobbleOffset);
     }
 
+    //Color Sensor and Limit Switches
+
+
 
     //Check LPS ------------------------------------------------------------------------------------
 
@@ -751,7 +815,7 @@ public class PowerSurgeTeleOp extends OpMode {
     }
 
     private void oldCheckLPS() {
-        double currentTime = getRuntime();
+        currentTime = getRuntime();
         loopCount++;
         if (currentTime > loopStartTime + 1) {
             loopsPerSecond = loopCount;
